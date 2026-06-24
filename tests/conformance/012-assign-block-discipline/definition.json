@@ -1,0 +1,24 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 012: assign reads pre-block state; last write wins.",
+  "entrypoint": "seed",
+  "steps": {
+    "seed": {
+      "action": "Pass",
+      "assign": { "x": "a" },
+      "next": "write"
+    },
+    "write": {
+      "action": "Pass",
+      "assign": {
+        "x": "{{ vars.x + 'b' }}",
+        "y": "{{ vars.x + 'c' }}"
+      },
+      "next": "done"
+    },
+    "done": {
+      "action": "Return",
+      "value": "{{ {'x': vars.x, 'y': vars.y} }}"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "entrypoint": "a",
+  "steps": {
+    "a": {
+      "action": "Gather",
+      "over": "{{ step.input.items }}",
+      "call": { "provider": "mwl:provider.call/mwl/mock/v1" },
+      "concurrency": 0,
+      "next": "b"
+    },
+    "b": { "action": "Return" }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 105: an argument the mock's schema does not declare.",
+  "entrypoint": "fetch",
+  "steps": {
+    "fetch": {
+      "action": "Call",
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": { "bogus": true }
+      },
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

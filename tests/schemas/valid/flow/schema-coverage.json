@@ -1,0 +1,261 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Schema-coverage fixture: exercises every action and field shape the root examples do not.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "publish": {
+        "type": "boolean",
+        "default": true
+      },
+      "resumeAt": {
+        "type": "string"
+      }
+    }
+  },
+  "middleware": [
+    {
+      "provider": "mwl:provider.middleware/example/observe/v1",
+      "onEntry": {
+        "when": "{{ vars.publish }}",
+        "with": {
+          "level": "info"
+        },
+        "assign": {
+          "startedAt": "{{ frame.metadata.enteredAt }}"
+        },
+        "output": "{{ middleware.input }}"
+      },
+      "onSuccess": {
+        "value": "{{ middleware.result.value }}"
+      },
+      "onFailure": {
+        "type": "ProcessingError",
+        "code": "Pipeline.Failed",
+        "message": "observed failure",
+        "details": {
+          "stage": "root"
+        },
+        "retryable": false,
+        "previous": null
+      },
+      "onAlways": {
+        "when": true,
+        "assign": {
+          "observed": "{{ true }}"
+        }
+      },
+      "comment": "Flow-level stack exercising all four phase blocks."
+    }
+  ],
+  "flows": {
+    "Child": {
+      "comment": "A named subflow with a required parameter.",
+      "parameters": {
+        "type": "object",
+        "required": [
+          "mode"
+        ],
+        "properties": {
+          "mode": {
+            "type": "string"
+          }
+        }
+      },
+      "entrypoint": "go",
+      "steps": {
+        "go": {
+          "action": "Return",
+          "value": "{{ vars.mode }}"
+        }
+      }
+    }
+  },
+  "entrypoint": "route",
+  "steps": {
+    "route": {
+      "action": "Match",
+      "input": "{{ step.input.order }}",
+      "cases": [
+        {
+          "when": "{{ match.input.kind == 'fast' }}",
+          "output": "{{ match.input }}",
+          "assign": {
+            "kind": "{{ match.input.kind }}"
+          },
+          "next": "pause",
+          "comment": "The fast path."
+        }
+      ],
+      "default": {
+        "next": "shape"
+      },
+      "comment": "Routes on the shaped order."
+    },
+    "pause": {
+      "action": "Sleep",
+      "for": "PT5S",
+      "next": "fetch"
+    },
+    "shape": {
+      "action": "Pass",
+      "output": "{{ {'wrapped': step.input} }}",
+      "assign": {
+        "shaped": "{{ true }}"
+      },
+      "next": "pause-until"
+    },
+    "pause-until": {
+      "action": "Sleep",
+      "until": "{{ vars.resumeAt }}",
+      "next": "fetch"
+    },
+    "fetch": {
+      "action": "Call",
+      "input": "{{ step.input }}",
+      "call": {
+        "provider": "mwl:provider.call/example/http/v1",
+        "input": "{{ call.input }}",
+        "with": {
+          "method": "GET",
+          "path": "/orders"
+        },
+        "onSuccess": {
+          "value": "{{ call.result.value.body }}",
+          "assign": {
+            "requestId": "{{ provider.metadata.requestId }}"
+          }
+        },
+        "onFailure": {
+          "assign": {
+            "failedRequestId": "{{ provider.metadata.requestId }}"
+          }
+        },
+        "comment": "A call with both arms."
+      },
+      "middleware": [
+        {
+          "provider": "mwl:provider.middleware/mwl/retry/v1",
+          "onEntry": {
+            "with": {
+              "policies": [
+                {
+                  "match": {
+                    "codes": [
+                      "Provider.Call.*"
+                    ],
+                    "retryable": true
+                  },
+                  "attempts": 2
+                }
+              ]
+            }
+          },
+          "onFailure": {
+            "with": {
+              "delay": "{{ has(middleware.result.details.retryAfter) ? middleware.result.details.retryAfter : null }}"
+            }
+          }
+        }
+      ],
+      "output": "{{ step.result.value }}",
+      "assign": {
+        "fetched": "{{ size(step.result.value) }}"
+      },
+      "next": "scatter",
+      "catch": [
+        {
+          "match": {
+            "codes": [
+              "Provider.Call.Http.*",
+              "System.*"
+            ]
+          },
+          "output": "{{ step.input }}",
+          "assign": {
+            "failedAt": "{{ step.metadata.enteredAt }}"
+          },
+          "next": "failed",
+          "comment": "A clause with shaping and capture."
+        },
+        {
+          "match": {
+            "types": [
+              "timeout",
+              "DomainOutage"
+            ],
+            "retryable": false
+          },
+          "next": "failed",
+          "comment": "A clause matching on type and the retryable signal."
+        }
+      ]
+    },
+    "scatter": {
+      "action": "Gather",
+      "calls": [
+        {
+          "provider": "mwl:provider.call/example/http/v1",
+          "with": {
+            "method": "GET",
+            "path": "/a"
+          }
+        },
+        {
+          "flow": "Child",
+          "with": {
+            "mode": "batch"
+          }
+        },
+        {
+          "flow": {
+            "entrypoint": "inline",
+            "steps": {
+              "inline": {
+                "action": "Return"
+              }
+            }
+          }
+        }
+      ],
+      "completion": {
+        "successes": "{{ step.metadata.dispatchCount }}",
+        "wait": false
+      },
+      "concurrency": 2,
+      "output": "{{ step.results.filter(r, r.type == 'success').map(r, r.value) }}",
+      "next": "iterate"
+    },
+    "iterate": {
+      "action": "Gather",
+      "over": "{{ step.input }}",
+      "call": {
+        "flow": "Child",
+        "with": {
+          "mode": "{{ 'item-' + string(call.index) }}"
+        }
+      },
+      "completion": {
+        "successes": 1
+      },
+      "next": "done"
+    },
+    "done": {
+      "action": "Return",
+      "value": "{{ step.input }}"
+    },
+    "failed": {
+      "action": "Raise",
+      "result": {
+        "type": "ProcessingError",
+        "code": "Pipeline.Failed",
+        "message": "downstream failure",
+        "details": {
+          "stage": "fetch"
+        },
+        "retryable": "{{ failure.retryable }}",
+        "previous": null
+      }
+    }
+  }
+}

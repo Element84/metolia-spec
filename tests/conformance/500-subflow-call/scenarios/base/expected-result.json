@@ -1,0 +1,4 @@
+{
+  "type": "success",
+  "value": { "greeting": "hello, world", "note": "from-subflow" }
+}

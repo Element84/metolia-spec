@@ -1,0 +1,11 @@
+{
+  "description": "The input data channel, shaped at the call and echoed back.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core",
+    "https://mwl.dev/v0.1/conformance/expressions/cel"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

@@ -1,0 +1,594 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mwl.dev/v0.1/flow/schema.json",
+  "title": "MWL workflow definition",
+  "description": "The meta-schema for a Metolia Workflow Language (MWL) workflow definition: a JSON document whose root is a Flow object. The prose specification is normative; this schema is its machine-checkable companion, and a definition MAY be validated against it. Cross-field constraints the prose states (entrypoint and next resolving to steps keys, flow names resolving to flows entries, provider URIs resolving against a catalog) are not expressible here and remain the prose's alone.",
+  "type": "object",
+  "$ref": "#/$defs/flowFields",
+  "required": ["$schema", "entrypoint", "steps"],
+  "properties": {
+    "$schema": {
+      "description": "Identifies the document as a Flow definition and the spec version it is authored against. Root document only.",
+      "const": "https://mwl.dev/v0.1/flow/schema.json"
+    }
+  },
+  "unevaluatedProperties": false,
+  "$defs": {
+    "flowFields": {
+      "description": "The fields common to every Flow object, wherever it appears: the root document, a named flows entry, or an inline call.flow value.",
+      "properties": {
+        "comment": {
+          "$ref": "#/$defs/comment"
+        },
+        "entrypoint": {
+          "description": "The Step where execution enters the graph. MUST be a key of this Flow's steps object.",
+          "type": "string"
+        },
+        "flows": {
+          "description": "A map from name to Flow object: named subflows a call can target by name.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/flow"
+          }
+        },
+        "middleware": {
+          "$ref": "#/$defs/middleware",
+          "description": "Ordered middleware wrapping the Flow's Step graph, outside-in: the first entry is the outermost wrapper."
+        },
+        "parameters": {
+          "$ref": "#/$defs/parametersSchema",
+          "description": "A JSON Schema (2020-12) document describing the Flow's named parameters; what a caller's with is validated against."
+        },
+        "steps": {
+          "description": "A map from Step name to Step definition: the Flow's Step graph.",
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "$ref": "#/$defs/step"
+          }
+        }
+      }
+    },
+    "flow": {
+      "description": "A Flow object in a non-root position: a named flows entry or an inline call.flow value. Same fields and semantics as the root, without $schema.",
+      "type": "object",
+      "$ref": "#/$defs/flowFields",
+      "required": ["entrypoint", "steps"],
+      "unevaluatedProperties": false
+    },
+    "step": {
+      "description": "A Step definition: an action discriminator with the fields that action accepts.",
+      "type": "object",
+      "required": ["action"],
+      "properties": {
+        "action": {
+          "enum": [
+            "Call",
+            "Gather",
+            "Match",
+            "Pass",
+            "Sleep",
+            "Return",
+            "Raise"
+          ]
+        }
+      },
+      "oneOf": [
+        { "$ref": "#/$defs/stepCall" },
+        { "$ref": "#/$defs/stepGather" },
+        { "$ref": "#/$defs/stepMatch" },
+        { "$ref": "#/$defs/stepPass" },
+        { "$ref": "#/$defs/stepSleep" },
+        { "$ref": "#/$defs/stepReturn" },
+        { "$ref": "#/$defs/stepRaise" }
+      ]
+    },
+    "stepCall": {
+      "description": "A Call Step: dispatches a single call object and routes on the Result it yields.",
+      "type": "object",
+      "required": ["action", "call", "next"],
+      "properties": {
+        "action": { "const": "Call" },
+        "call": { "$ref": "#/$defs/call" },
+        "input": {
+          "description": "Shapes the value entering the Step's machinery. Default: {{ step.input }}."
+        },
+        "output": {
+          "description": "Shapes the value the Step emits on success. Default: {{ step.result.value }}."
+        },
+        "assign": { "$ref": "#/$defs/assign" },
+        "middleware": {
+          "$ref": "#/$defs/middleware",
+          "description": "Ordered middleware wrapping the Step's dispatch, outside-in."
+        },
+        "catch": { "$ref": "#/$defs/catch" },
+        "next": { "$ref": "#/$defs/stepName" },
+        "comment": { "$ref": "#/$defs/comment" }
+      },
+      "additionalProperties": false
+    },
+    "stepGather": {
+      "description": "A Gather Step: fans dispatches out concurrently and gathers the Results back in. Carries exactly one of its two forms: over with call (iterate), or calls (scatter).",
+      "type": "object",
+      "required": ["action", "next"],
+      "properties": {
+        "action": { "const": "Gather" },
+        "over": {
+          "description": "Iterate form: the collection to dispatch over, one dispatch per element. MUST produce an array.",
+          "anyOf": [
+            { "type": "array" },
+            { "$ref": "#/$defs/expression" }
+          ]
+        },
+        "call": {
+          "$ref": "#/$defs/call",
+          "description": "Iterate form: the one call template, dispatched once per element of the over result."
+        },
+        "calls": {
+          "description": "Scatter form: a literal, non-empty array of call objects, one dispatch per entry.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/call" }
+        },
+        "completion": { "$ref": "#/$defs/completion" },
+        "concurrency": {
+          "description": "Caps the number of dispatches active at once. A literal positive integer, or null for unlimited; no expression. Default (absent or null): unlimited.",
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "output": {
+          "description": "Shapes the value the Step emits on success. Default: the success projection over step.results."
+        },
+        "assign": { "$ref": "#/$defs/assign" },
+        "catch": { "$ref": "#/$defs/catch" },
+        "next": { "$ref": "#/$defs/stepName" },
+        "comment": { "$ref": "#/$defs/comment" }
+      },
+      "oneOf": [
+        {
+          "required": ["over", "call"],
+          "not": { "required": ["calls"] }
+        },
+        {
+          "required": ["calls"],
+          "allOf": [
+            { "not": { "required": ["over"] } },
+            { "not": { "required": ["call"] } }
+          ]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "completion": {
+      "description": "A Gather's completion policy. Absent, every dispatch must succeed.",
+      "type": "object",
+      "required": ["successes"],
+      "properties": {
+        "successes": {
+          "description": "The number of dispatches that must succeed, evaluated once after the dispatches are enumerated.",
+          "anyOf": [
+            { "type": "integer" },
+            { "$ref": "#/$defs/expression" }
+          ]
+        },
+        "wait": {
+          "description": "Whether dispatches still pending once the outcome is determined run to completion (true) or are cancelled and skipped (false). A literal; no expression.",
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "stepMatch": {
+      "description": "A Match Step: routes to one of several successors by testing predicates against a single shaped value.",
+      "type": "object",
+      "required": ["action", "cases", "default"],
+      "properties": {
+        "action": { "const": "Match" },
+        "input": {
+          "description": "Shapes the value the clause predicates test, read by every clause as match.input. Default: {{ step.input }}."
+        },
+        "cases": {
+          "description": "Ordered clauses; the first whose when holds is selected, and no later predicate evaluates.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/matchCase" }
+        },
+        "default": { "$ref": "#/$defs/matchDefault" },
+        "comment": { "$ref": "#/$defs/comment" }
+      },
+      "additionalProperties": false
+    },
+    "matchCase": {
+      "description": "A cases clause: a predicate with the routing, shaping, and capture that apply when it is selected.",
+      "type": "object",
+      "required": ["when", "next"],
+      "properties": {
+        "when": {
+          "$ref": "#/$defs/expression",
+          "description": "The clause's predicate. A when that fails to evaluate does not propagate: the clause simply does not match."
+        },
+        "output": {
+          "description": "Shapes the value the clause's next receives. Default: {{ match.input }}."
+        },
+        "assign": { "$ref": "#/$defs/assign" },
+        "next": { "$ref": "#/$defs/stepName" },
+        "comment": { "$ref": "#/$defs/comment" }
+      },
+      "additionalProperties": false
+    },
+    "matchDefault": {
+      "description": "The required fallback clause, selected when no case matches: the case shape without when.",
+      "type": "object",
+      "required": ["next"],
+      "properties": {
+        "output": {
+          "description": "Shapes the value the clause's next receives. Default: {{ match.input }}."
+        },
+        "assign": { "$ref": "#/$defs/assign" },
+        "next": { "$ref": "#/$defs/stepName" },
+        "comment": { "$ref": "#/$defs/comment" }
+      },
+      "additionalProperties": false
+    },
+    "stepPass": {
+      "description": "A Pass Step: performs no action work; emits a value and captures variables, then transitions.",
+      "type": "object",
+      "required": ["action", "next"],
+      "properties": {
+        "action": { "const": "Pass" },
+        "output": {
+          "description": "Shapes the value the Step emits. Default: {{ step.input }}."
+        },
+        "assign": { "$ref": "#/$defs/assign" },
+        "next": { "$ref": "#/$defs/stepName" },
+        "comment": { "$ref": "#/$defs/comment" }
+      },
+      "additionalProperties": false
+    },
+    "stepSleep": {
+      "description": "A Sleep Step: pauses the frame for a duration or until an instant. Exactly one of for and until MUST be present.",
+      "type": "object",
+      "required": ["action", "next"],
+      "properties": {
+        "action": { "const": "Sleep" },
+        "for": {
+          "description": "An ISO 8601 duration, or an expression producing one.",
+          "type": "string"
+        },
+        "until": {
+          "description": "An RFC 3339 timestamp, or an expression producing one.",
+          "type": "string"
+        },
+        "next": { "$ref": "#/$defs/stepName" },
+        "comment": { "$ref": "#/$defs/comment" }
+      },
+      "oneOf": [
+        {
+          "required": ["for"],
+          "not": { "required": ["until"] }
+        },
+        {
+          "required": ["until"],
+          "not": { "required": ["for"] }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "stepReturn": {
+      "description": "A Return Step: the terminal success. The frame completes with a success Result carrying the shaped value.",
+      "type": "object",
+      "required": ["action"],
+      "properties": {
+        "action": { "const": "Return" },
+        "value": {
+          "description": "Shapes the value the success Result carries. Default: {{ step.input }}."
+        },
+        "comment": { "$ref": "#/$defs/comment" }
+      },
+      "additionalProperties": false
+    },
+    "stepRaise": {
+      "description": "A Raise Step: the terminal failure. With a result, constructs the failure; bare, re-raises the failure being handled.",
+      "type": "object",
+      "required": ["action"],
+      "properties": {
+        "action": { "const": "Raise" },
+        "result": { "$ref": "#/$defs/raiseResult" },
+        "comment": { "$ref": "#/$defs/comment" }
+      },
+      "additionalProperties": false
+    },
+    "raiseResult": {
+      "description": "The authorable fields of the failure envelope. Each field accepts an expression; unwritten fields are absent.",
+      "type": "object",
+      "required": ["code"],
+      "properties": {
+        "type": {
+          "description": "The failure Result's type. MUST be a non-success type. Default: \"error\".",
+          "type": "string",
+          "not": { "const": "success" }
+        },
+        "code": {
+          "description": "The specific failure identifier: a dotted string whose first segment is, by convention, a namespace.",
+          "type": "string"
+        },
+        "message": {
+          "description": "A human-readable description.",
+          "type": "string"
+        },
+        "details": {
+          "description": "Arbitrary structured context."
+        },
+        "retryable": {
+          "description": "An advisory retry signal: true, false, or null (no assertion).",
+          "anyOf": [
+            { "type": ["boolean", "null"] },
+            { "$ref": "#/$defs/expression" }
+          ]
+        },
+        "previous": {
+          "description": "A chained prior failure this one supersedes. Unwritten, the engine links any active failure; null severs the chain.",
+          "anyOf": [
+            { "type": ["object", "null"] },
+            { "$ref": "#/$defs/expression" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "call": {
+      "description": "A call object: a request to run a target and obtain its Result. MUST name exactly one target, provider or flow.",
+      "type": "object",
+      "properties": {
+        "provider": {
+          "$ref": "#/$defs/callProviderUri"
+        },
+        "flow": {
+          "description": "A named Flow declared in flows, referenced by bare name, or an inline Flow object.",
+          "anyOf": [
+            { "type": "string" },
+            { "$ref": "#/$defs/flow" }
+          ]
+        },
+        "input": {
+          "description": "A data payload threaded into the target; a separate channel from with. Default: {{ call.input }}."
+        },
+        "with": {
+          "$ref": "#/$defs/with",
+          "description": "Arguments supplied to the target, validated against the target's parameters schema."
+        },
+        "onSuccess": {
+          "description": "The success arm: shapes the value placed in the Call's success Result and captures variables.",
+          "type": "object",
+          "properties": {
+            "value": {
+              "description": "Produces the value the Call's success Result carries. Default: {{ call.result.value }}."
+            },
+            "assign": { "$ref": "#/$defs/assign" }
+          },
+          "additionalProperties": false
+        },
+        "onFailure": {
+          "description": "The failure arm: captures variables from the failed dispatch's live context. It does not reshape the failure.",
+          "type": "object",
+          "properties": {
+            "assign": { "$ref": "#/$defs/assign" }
+          },
+          "additionalProperties": false
+        },
+        "comment": { "$ref": "#/$defs/comment" }
+      },
+      "oneOf": [
+        {
+          "required": ["provider"],
+          "not": { "required": ["flow"] }
+        },
+        {
+          "required": ["flow"],
+          "not": { "required": ["provider"] }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "middleware": {
+      "description": "An ordered array of middleware entries, outside-in: the first entry is the outermost wrapper.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/middlewareEntry" }
+    },
+    "middlewareEntry": {
+      "description": "A middleware entry: names a middleware by provider URI and configures its participation phase by phase. An absent phase block is equivalent to an empty one.",
+      "type": "object",
+      "required": ["provider"],
+      "properties": {
+        "provider": {
+          "$ref": "#/$defs/middlewareProviderUri"
+        },
+        "onEntry": { "$ref": "#/$defs/phaseOnEntry" },
+        "onSuccess": { "$ref": "#/$defs/phaseOnSuccess" },
+        "onFailure": { "$ref": "#/$defs/phaseOnFailure" },
+        "onAlways": { "$ref": "#/$defs/phaseOnAlways" },
+        "comment": { "$ref": "#/$defs/comment" }
+      },
+      "additionalProperties": false
+    },
+    "phaseOnEntry": {
+      "description": "Configures the entry's onEntry phase, run once on the way down at first entry.",
+      "type": "object",
+      "properties": {
+        "when": { "$ref": "#/$defs/when" },
+        "with": { "$ref": "#/$defs/phaseWith" },
+        "assign": { "$ref": "#/$defs/assign" },
+        "output": {
+          "description": "Shapes the value passed down to the next inner entry or, at the last entry, into the wrapped operation. Default: {{ middleware.input }}."
+        }
+      },
+      "additionalProperties": false
+    },
+    "phaseOnSuccess": {
+      "description": "Configures the entry's onSuccess phase, run on ascent when the rising Result is a success.",
+      "type": "object",
+      "properties": {
+        "when": { "$ref": "#/$defs/when" },
+        "with": { "$ref": "#/$defs/phaseWith" },
+        "assign": { "$ref": "#/$defs/assign" },
+        "value": {
+          "description": "Produces the success value the entry emits upward. Default: {{ middleware.result.value }}."
+        }
+      },
+      "additionalProperties": false
+    },
+    "phaseOnFailure": {
+      "description": "Configures the entry's onFailure phase, run on ascent when the rising Result is a failure. Writing any envelope field constructs a new failure superseding the rising one; an unwritten field other than previous is taken from the superseded failure.",
+      "type": "object",
+      "properties": {
+        "when": { "$ref": "#/$defs/when" },
+        "with": { "$ref": "#/$defs/phaseWith" },
+        "assign": { "$ref": "#/$defs/assign" },
+        "type": {
+          "description": "The constructed failure's type. MUST be a non-success type.",
+          "type": "string",
+          "not": { "const": "success" }
+        },
+        "code": {
+          "description": "The constructed failure's code.",
+          "type": "string"
+        },
+        "message": {
+          "description": "The constructed failure's message.",
+          "type": "string"
+        },
+        "details": {
+          "description": "The constructed failure's details."
+        },
+        "retryable": {
+          "description": "The constructed failure's advisory retry signal.",
+          "anyOf": [
+            { "type": ["boolean", "null"] },
+            { "$ref": "#/$defs/expression" }
+          ]
+        },
+        "previous": {
+          "description": "Overrides the engine's chain link. Typically written only to sever the chain with null.",
+          "anyOf": [
+            { "type": ["object", "null"] },
+            { "$ref": "#/$defs/expression" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "phaseOnAlways": {
+      "description": "Configures the entry's onAlways phase, run on every ascent after onSuccess or onFailure. The phase has no shaping key: the rising Result passes through unchanged.",
+      "type": "object",
+      "properties": {
+        "when": { "$ref": "#/$defs/when" },
+        "with": { "$ref": "#/$defs/phaseWith" },
+        "assign": { "$ref": "#/$defs/assign" }
+      },
+      "additionalProperties": false
+    },
+    "when": {
+      "description": "A predicate gating the phase's action: when false, the action does not run and the phase's with is not evaluated. Author shaping always evaluates. Default: true.",
+      "anyOf": [
+        { "type": "boolean" },
+        { "$ref": "#/$defs/expression" }
+      ]
+    },
+    "phaseWith": {
+      "description": "The middleware's parameter namespace for the phase, validated against the schema its contract declares for that phase. Either an object whose fields each accept an expression, or a single expression producing the whole object.",
+      "anyOf": [
+        { "type": "object" },
+        { "$ref": "#/$defs/expression" }
+      ]
+    },
+    "with": {
+      "description": "Arguments supplied to a call's target. Either an object whose fields each accept an expression, or a single expression producing the whole object.",
+      "anyOf": [
+        { "type": "object" },
+        { "$ref": "#/$defs/expression" }
+      ]
+    },
+    "catch": {
+      "description": "The Step's failure-path routing: ordered clauses, the first whose match matches the failure wins.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/catchClause" }
+    },
+    "catchClause": {
+      "description": "A conditional failure edge: when the Step's failure matches, control transitions to the clause's next.",
+      "type": "object",
+      "required": ["match", "next"],
+      "properties": {
+        "match": { "$ref": "#/$defs/failureMatcher" },
+        "output": {
+          "description": "Shapes the value the handler Step receives. Default: {{ step.input }}."
+        },
+        "assign": { "$ref": "#/$defs/assign" },
+        "next": { "$ref": "#/$defs/stepName" },
+        "comment": { "$ref": "#/$defs/comment" }
+      },
+      "additionalProperties": false
+    },
+    "failureMatcher": {
+      "description": "A failure matcher: each member constrains one contract field of the failure envelope, and every member present must match. Structural; member values are data, not expressions.",
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "codes": {
+          "description": "Failure-code patterns: \"Prefix.Code\" (exact), \"Prefix.*\" (prefix), or \"*\" (any failure). Matches when the failure's code matches any pattern.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "types": {
+          "description": "Non-success Result type names. Matches when the failure's type is any of them; \"success\" is not permitted.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "not": { "const": "success" }
+          }
+        },
+        "retryable": {
+          "description": "Matches only a failure asserting the same explicit retryable value; an unset signal (absent or null) matches neither.",
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "assign": {
+      "description": "A map from variable name to expression; each expression's value is bound to that name in vars on successful exit. Every expression in the block evaluates against the variable state from before the block.",
+      "type": "object"
+    },
+    "stepName": {
+      "description": "A Step reference. MUST be a key of the same steps map; cross-scope transitions are not permitted.",
+      "type": "string"
+    },
+    "callProviderUri": {
+      "description": "A call-provider URI under the mwl scheme: mwl:provider.call/<namespace>/<name...>. Segments MUST NOT be \".\" or \"..\".",
+      "type": "string",
+      "pattern": "^mwl:provider\\.call/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$"
+    },
+    "middlewareProviderUri": {
+      "description": "A middleware-provider URI under the mwl scheme: mwl:provider.middleware/<namespace>/<name...>. Segments MUST NOT be \".\" or \"..\".",
+      "type": "string",
+      "pattern": "^mwl:provider\\.middleware/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$"
+    },
+    "parametersSchema": {
+      "description": "A JSON Schema (2020-12) document describing named parameters. MUST have \"type\": \"object\" at the top level. Validation against it is closed by default: absent additionalProperties is evaluated as false.",
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "object" }
+      }
+    },
+    "expression": {
+      "description": "An expression: a string whose entire content one delimiter pair sets off. This version defines one pair, {{ }}, identifying CEL.",
+      "type": "string",
+      "pattern": "^\\{\\{[\\s\\S]*\\}\\}$"
+    },
+    "comment": {
+      "description": "Human-readable documentation; no runtime meaning.",
+      "type": "string"
+    }
+  }
+}

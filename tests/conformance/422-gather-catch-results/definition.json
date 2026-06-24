@@ -1,0 +1,35 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 422: the resolution guarantee makes step.results whole in catch.",
+  "entrypoint": "fan-out",
+  "steps": {
+    "fan-out": {
+      "action": "Gather",
+      "over": "{{ step.input }}",
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": {
+          "failure": "{{ call.input == 'b' ? {'code': 'Conformance.InjectedFailure', 'message': 'injected'} : null }}"
+        }
+      },
+      "next": "done",
+      "catch": [
+        {
+          "match": {
+            "codes": [
+              "System.GatherCompletionUnmet"
+            ]
+          },
+          "output": "{{ step.results.filter(r, r.type == 'success').map(r, r.value) }}",
+          "next": "report"
+        }
+      ]
+    },
+    "report": {
+      "action": "Return"
+    },
+    "done": {
+      "action": "Return"
+    }
+  }
+}

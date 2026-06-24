@@ -1,0 +1,13 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 022: a literal that is not a duration fails validation.",
+  "entrypoint": "pause",
+  "steps": {
+    "pause": {
+      "action": "Sleep",
+      "for": "not-a-duration",
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

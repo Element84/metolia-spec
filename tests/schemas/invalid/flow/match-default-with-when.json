@@ -1,0 +1,17 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "entrypoint": "a",
+  "steps": {
+    "a": {
+      "action": "Match",
+      "cases": [
+        { "when": "{{ step.input.ok }}", "next": "b" }
+      ],
+      "default": {
+        "when": "{{ true }}",
+        "next": "b"
+      }
+    },
+    "b": { "action": "Return" }
+  }
+}

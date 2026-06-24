@@ -1,0 +1,16 @@
+{
+  "description": "The over result's domain: empty dispatches zero, non-array fails.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core",
+    "https://mwl.dev/v0.1/conformance/expressions/cel"
+  ],
+  "marks": [],
+  "scenarios": {
+    "empty-array": {
+      "description": "An empty over result makes zero dispatches and projects []."
+    },
+    "non-array": {
+      "description": "A non-array over result: System.ParameterValidationFailed."
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "description": "A bare Raise with no active failure: System.EmptyRaise.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

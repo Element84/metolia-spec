@@ -1,0 +1,22 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "entrypoint": "a",
+  "flows": {
+    "F": {
+      "entrypoint": "s",
+      "steps": {
+        "s": { "action": "Return" }
+      }
+    }
+  },
+  "steps": {
+    "a": {
+      "action": "Gather",
+      "over": "{{ step.input }}",
+      "call": { "flow": "F" },
+      "calls": [{ "flow": "F" }],
+      "next": "b"
+    },
+    "b": { "action": "Return" }
+  }
+}

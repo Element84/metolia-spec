@@ -1,0 +1,17 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 650: the entrypoint Step sees the stack's shaped input.",
+  "middleware": [
+    {
+      "provider": "mwl:provider.middleware/mwl/timeout/v1",
+      "onEntry": {
+        "with": { "duration": "PT1H" },
+        "output": "{{ {'shaped': middleware.input} }}"
+      }
+    }
+  ],
+  "entrypoint": "done",
+  "steps": {
+    "done": { "action": "Return" }
+  }
+}

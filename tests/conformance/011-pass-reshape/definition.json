@@ -1,0 +1,13 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 011: a Pass Step wraps the value crossing it.",
+  "entrypoint": "shape",
+  "steps": {
+    "shape": {
+      "action": "Pass",
+      "output": "{{ {'wrapped': step.input} }}",
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

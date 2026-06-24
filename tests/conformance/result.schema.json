@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Expected Result",
+  "description": "The shape of a conformance case's expected-result.json: a success Result with its value, or a failure envelope carrying at least type and code. Defined for this suite; the comparison rules are in the suite README.",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": ["type", "value"],
+      "properties": {
+        "type": { "const": "success" },
+        "value": true
+      },
+      "additionalProperties": false
+    },
+    { "$ref": "#/$defs/failure" }
+  ],
+  "$defs": {
+    "failure": {
+      "type": "object",
+      "required": ["type", "code"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "not": { "const": "success" }
+        },
+        "code": { "type": "string" },
+        "message": { "type": "string" },
+        "details": true,
+        "retryable": { "type": ["boolean", "null"] },
+        "previous": {
+          "anyOf": [
+            { "$ref": "#/$defs/failure" },
+            { "type": "null" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

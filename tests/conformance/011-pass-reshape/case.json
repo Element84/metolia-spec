@@ -1,0 +1,11 @@
+{
+  "description": "Reshaping a value with a Pass Step's output.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core",
+    "https://mwl.dev/v0.1/conformance/expressions/cel"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

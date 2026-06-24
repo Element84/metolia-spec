@@ -1,0 +1,11 @@
+pre-commit:
+  commands:
+    dprint:
+      glob: "*.{md,json}"
+      run: dprint fmt --fail-on-change {staged_files}
+      stage_fixed: false
+    schemas:
+      glob: "*.json"
+      run: bash scripts/check-staged.sh -- '$SCRIPTS_DIR/check-schemas.sh'
+    build:
+      run: bash scripts/check-staged.sh -- '$SCRIPTS_DIR/check-build.sh'

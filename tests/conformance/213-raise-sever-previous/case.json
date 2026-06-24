@@ -1,0 +1,10 @@
+{
+  "description": "Writing previous: null severs the chain.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 020: a one-second pause; the value passes through.",
+  "entrypoint": "pause",
+  "steps": {
+    "pause": {
+      "action": "Sleep",
+      "for": "PT1S",
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

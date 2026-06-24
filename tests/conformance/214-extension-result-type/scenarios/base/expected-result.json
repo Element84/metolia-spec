@@ -1,0 +1,6 @@
+{
+  "type": "ProcessingError",
+  "code": "Conformance.DomainFailure",
+  "message": "domain failure",
+  "previous": null
+}

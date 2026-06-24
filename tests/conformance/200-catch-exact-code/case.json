@@ -1,0 +1,10 @@
+{
+  "description": "catch routing on an exact code, with clause output.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

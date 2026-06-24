@@ -1,0 +1,11 @@
+{
+  "description": "The failure arm captures provider.metadata from a failed dispatch.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core",
+    "https://mwl.dev/v0.1/conformance/expressions/cel"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

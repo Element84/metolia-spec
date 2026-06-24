@@ -1,0 +1,11 @@
+{
+  "$schema": "https://mwl.dev/v0.1/provider/schema.json",
+  "uri": "mwl:provider.call/example/http/v1",
+  "codePrefix": "Http",
+  "description": "A failure catalog whose open entry is a bare code, not a sub-prefix ending in .*",
+  "parameters": { "type": "object" },
+  "failureCatalog": {
+    "closed": [],
+    "open": ["Provider.Call.Http.ConnectionFailed"]
+  }
+}

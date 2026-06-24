@@ -1,0 +1,10 @@
+{
+  "description": "An extension Result type rides the envelope and matches by code.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

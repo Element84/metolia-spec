@@ -1,0 +1,10 @@
+{
+  "description": "Sleep until an instant already past completes at once.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

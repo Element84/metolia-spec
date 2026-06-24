@@ -1,0 +1,19 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 410: a failed dispatch makes the default policy unachievable.",
+  "entrypoint": "fan-out",
+  "steps": {
+    "fan-out": {
+      "action": "Gather",
+      "over": "{{ step.input }}",
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": {
+          "failure": "{{ call.input == 'b' ? {'code': 'Conformance.InjectedFailure', 'message': 'injected'} : null }}"
+        }
+      },
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

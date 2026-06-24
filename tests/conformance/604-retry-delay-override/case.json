@@ -1,0 +1,11 @@
+{
+  "description": "The onFailure delay parameter overrides the gap's backoff delay.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core",
+    "https://mwl.dev/v0.1/conformance/expressions/cel"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

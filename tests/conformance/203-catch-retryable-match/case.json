@@ -1,0 +1,19 @@
+{
+  "description": "Three-valued retryable matching across catch clauses.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core",
+    "https://mwl.dev/v0.1/conformance/expressions/cel"
+  ],
+  "marks": [],
+  "scenarios": {
+    "asserted-true": {
+      "description": "retryable: true matches the clause asserting true."
+    },
+    "asserted-false": {
+      "description": "retryable: false matches the clause asserting false."
+    },
+    "unset": {
+      "description": "A null signal matches neither boolean clause and falls to the wildcard."
+    }
+  }
+}

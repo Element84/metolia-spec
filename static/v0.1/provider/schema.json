@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mwl.dev/v0.1/provider/schema.json",
+  "title": "MWL provider definition",
+  "description": "The schema for a Metolia Workflow Language (MWL) provider definition: the interchange form of a provider's catalog entry, for either provider kind. The kind is discriminated by the uri's type segment: provider.call or provider.middleware. The prose specification is normative; this schema is its machine-checkable companion.",
+  "type": "object",
+  "oneOf": [
+    { "$ref": "#/$defs/callProvider" },
+    { "$ref": "#/$defs/middlewareProvider" }
+  ],
+  "$defs": {
+    "callProvider": {
+      "description": "A call provider: a Call target. Declares the parameter schema its with is validated against and the metadata its window exposes.",
+      "type": "object",
+      "required": [
+        "$schema",
+        "uri",
+        "codePrefix",
+        "description",
+        "parameters",
+        "failureCatalog"
+      ],
+      "properties": {
+        "$schema": { "$ref": "#/$defs/schemaUri" },
+        "uri": {
+          "description": "The provider's identity: a call-provider URI under the mwl scheme, matched exactly.",
+          "type": "string",
+          "pattern": "^mwl:provider\\.call/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$"
+        },
+        "codePrefix": { "$ref": "#/$defs/codePrefix" },
+        "description": { "$ref": "#/$defs/description" },
+        "parameters": {
+          "$ref": "#/$defs/objectSchema",
+          "description": "The provider's parameter schema: what a call's with is validated against at dispatch."
+        },
+        "metadata": {
+          "$ref": "#/$defs/objectSchema",
+          "description": "A JSON Schema describing the members the provider exposes as the provider window's metadata."
+        },
+        "failureCatalog": { "$ref": "#/$defs/failureCatalog" }
+      },
+      "additionalProperties": false
+    },
+    "middlewareProvider": {
+      "description": "A middleware provider: plugs into the phase model, wrapping a Call or a Step graph. Declares its attachment levels and its per-phase contract.",
+      "type": "object",
+      "required": [
+        "$schema",
+        "uri",
+        "codePrefix",
+        "description",
+        "attachment",
+        "phases",
+        "failureCatalog"
+      ],
+      "properties": {
+        "$schema": { "$ref": "#/$defs/schemaUri" },
+        "uri": {
+          "description": "The provider's identity: a middleware-provider URI under the mwl scheme, matched exactly.",
+          "type": "string",
+          "pattern": "^mwl:provider\\.middleware/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$"
+        },
+        "codePrefix": { "$ref": "#/$defs/codePrefix" },
+        "description": { "$ref": "#/$defs/description" },
+        "attachment": {
+          "description": "The levels the middleware may attach at: a Step's middleware array, a Flow's, or both.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["step", "flow"]
+          }
+        },
+        "phases": {
+          "description": "The middleware's per-phase contract. A phase listed here declares an action; a phase not listed declares none, and when is a no-op there.",
+          "type": "object",
+          "minProperties": 1,
+          "properties": {
+            "onEntry": { "$ref": "#/$defs/phaseContract" },
+            "onSuccess": { "$ref": "#/$defs/phaseContract" },
+            "onFailure": { "$ref": "#/$defs/phaseContract" },
+            "onAlways": { "$ref": "#/$defs/phaseContract" }
+          },
+          "additionalProperties": false
+        },
+        "metadata": {
+          "$ref": "#/$defs/objectSchema",
+          "description": "A JSON Schema describing the members the middleware contributes to its entry's metadata record."
+        },
+        "failureCatalog": { "$ref": "#/$defs/failureCatalog" }
+      },
+      "additionalProperties": false
+    },
+    "phaseContract": {
+      "description": "What the middleware declares for one phase: the action it performs there, the schema the phase's with is validated against, and any parameters taken structurally.",
+      "type": "object",
+      "required": ["action"],
+      "properties": {
+        "action": {
+          "description": "The action the middleware performs at this phase, gateable by the phase's when.",
+          "type": "object",
+          "required": ["kind", "description"],
+          "properties": {
+            "kind": {
+              "description": "The action's kind: a side-effect acts without touching the data flow; a control passes the in-flight Result through or substitutes a whole Result; a transform performs an implementation-defined transformation of the value itself.",
+              "enum": ["side-effect", "control", "transform"]
+            },
+            "description": {
+              "description": "What the action does, including its behavior when gated off.",
+              "type": "string"
+            },
+            "acceptance": {
+              "description": "For a control action that acts concurrently with the wrapped operation: the point at which the rising Result is committed and the action can no longer substitute for it.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "parameters": {
+          "$ref": "#/$defs/objectSchema",
+          "description": "The parameter schema the phase's with is validated against, when the phase runs."
+        },
+        "structural": {
+          "description": "Names of parameters taken structurally: their values are part of the definition, not expressions evaluated at the phase.",
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "failureCatalog": {
+      "description": "The codes the provider can emit under its prefix: closed codes, declared exactly, and open sub-prefixes, regions where codes not knowable in advance may appear.",
+      "type": "object",
+      "required": ["closed", "open"],
+      "properties": {
+        "closed": {
+          "description": "The specific codes the provider can emit, fully qualified: Provider.<Kind>.<codePrefix>.<Code>.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^Provider\\.(Call|Middleware)\\.[A-Za-z0-9]+(\\.[A-Za-z0-9]+)+$"
+          }
+        },
+        "open": {
+          "description": "Open sub-prefixes, each ending in .* — or \"*\" alone, declaring the whole code space open.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^(\\*|Provider\\.(Call|Middleware)\\.[A-Za-z0-9]+(\\.[A-Za-z0-9]+)*\\.\\*)$"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "objectSchema": {
+      "description": "A JSON Schema (2020-12) document describing an object: named parameters or metadata members. MUST have \"type\": \"object\" at the top level.",
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "object" }
+      }
+    },
+    "schemaUri": {
+      "description": "Identifies the document as an MWL provider definition and the spec version it is authored against.",
+      "const": "https://mwl.dev/v0.1/provider/schema.json"
+    },
+    "codePrefix": {
+      "description": "The provider's identity segment in failure codes: the third segment of Provider.<Kind>.<codePrefix>.<Code>.",
+      "type": "string",
+      "pattern": "^[A-Z][A-Za-z0-9]*$"
+    },
+    "description": {
+      "description": "A human-readable description of the provider.",
+      "type": "string"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "type": "error",
+  "code": "System.GatherCompletionUnmet",
+  "details": {
+    "failures": [
+      {
+        "index": 1,
+        "result": {
+          "type": "error",
+          "code": "Provider.Middleware.Retry.Exhausted",
+          "details": { "attempts": 2, "policy": 0 },
+          "previous": {
+            "type": "error",
+            "code": "Conformance.InjectedFailure",
+            "message": "injected"
+          }
+        }
+      }
+    ],
+    "failureCount": 1
+  }
+}

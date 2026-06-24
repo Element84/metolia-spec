@@ -1,0 +1,6 @@
+{
+  "type": "error",
+  "code": "Conformance.WrappedFailure",
+  "message": "wrapped without history",
+  "previous": null
+}

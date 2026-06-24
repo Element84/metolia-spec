@@ -1,0 +1,10 @@
+{
+  "description": "Clause order: the first matching clause wins.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

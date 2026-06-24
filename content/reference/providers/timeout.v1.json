@@ -1,0 +1,43 @@
+{
+  "$schema": "https://mwl.dev/v0.1/provider/schema.json",
+  "uri": "mwl:provider.middleware/mwl/timeout/v1",
+  "codePrefix": "Timeout",
+  "description": "Bounds its inner scope's execution time. When the bound elapses before a Result is accepted, interrupts the scope under the cancellation rules and emits Provider.Middleware.Timeout.Exceeded from the entry's position.",
+  "attachment": ["step", "flow"],
+  "phases": {
+    "onEntry": {
+      "action": {
+        "kind": "control",
+        "description": "Starts the bound: the duration is captured at first entry and the action races the inner scope from establishment. Gated off, no bound exists for the pass.",
+        "acceptance": "A Result rising at the entry's position is accepted when the platform receives it; once accepted, the bound can no longer fire."
+      },
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["duration"],
+        "properties": {
+          "duration": {
+            "type": "string",
+            "format": "duration",
+            "description": "The maximum time the inner scope may run, as an ISO 8601 duration."
+          }
+        }
+      }
+    }
+  },
+  "metadata": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "deadline": {
+        "type": "string",
+        "format": "date-time",
+        "description": "The instant the bound fires: establishment plus duration."
+      }
+    }
+  },
+  "failureCatalog": {
+    "closed": ["Provider.Middleware.Timeout.Exceeded"],
+    "open": []
+  }
+}

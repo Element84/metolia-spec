@@ -1,0 +1,30 @@
+{
+  "description": "An onSuccess arm fault tightens a settled outcome; the Gather's verdict is computed after the arms.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core",
+    "https://mwl.dev/v0.1/conformance/expressions/cel"
+  ],
+  "marks": [
+    "temporal"
+  ],
+  "scenarios": {
+    "all-succeed": {
+      "description": "Baseline: every dispatch settles and arms successfully; the policy is met."
+    },
+    "settled-failure-observed": {
+      "description": "A dispatch configured to fail at the mock is observed data; the policy is still met."
+    },
+    "arm-fault-tightens-to-unmet": {
+      "description": "All dispatches settle successfully (policy met), but one arm faults, dropping the count below the policy."
+    },
+    "arm-fault-survives": {
+      "description": "The same arm fault under a looser policy that still clears after tightening."
+    },
+    "mixed-causes-unmet": {
+      "description": "A settled failure and an arm fault both count against the policy; the evidence tells the two causes apart."
+    },
+    "order-under-delay": {
+      "description": "Descending per-dispatch delays scramble completion order; the output projection stays in dispatch order."
+    }
+  }
+}

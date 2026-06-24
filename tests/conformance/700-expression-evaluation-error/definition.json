@@ -1,0 +1,13 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 700: a faulting expression fails the frame.",
+  "entrypoint": "shape",
+  "steps": {
+    "shape": {
+      "action": "Pass",
+      "output": "{{ step.input.missing.deeply }}",
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

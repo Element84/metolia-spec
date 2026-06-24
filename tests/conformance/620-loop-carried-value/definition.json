@@ -1,0 +1,26 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 620: three loop runs, each feeding the next via the carried value.",
+  "entrypoint": "accumulate",
+  "steps": {
+    "accumulate": {
+      "action": "Call",
+      "middleware": [
+        {
+          "provider": "mwl:provider.middleware/mwl/loop/v1",
+          "onSuccess": {
+            "when": "{{ middleware.metadata.iteration < 3 }}"
+          }
+        }
+      ],
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": {
+          "value": "{{ call.input + 'x' }}"
+        }
+      },
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

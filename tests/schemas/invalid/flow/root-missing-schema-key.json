@@ -1,0 +1,6 @@
+{
+  "entrypoint": "a",
+  "steps": {
+    "a": { "action": "Return" }
+  }
+}

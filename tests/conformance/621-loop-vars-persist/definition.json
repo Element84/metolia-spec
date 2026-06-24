@@ -1,0 +1,31 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 621: each iteration's assign accumulates; nothing restores.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "marks": { "type": "string", "default": "" }
+    }
+  },
+  "entrypoint": "accumulate",
+  "steps": {
+    "accumulate": {
+      "action": "Call",
+      "middleware": [
+        {
+          "provider": "mwl:provider.middleware/mwl/loop/v1",
+          "onSuccess": {
+            "when": "{{ middleware.metadata.iteration < 3 }}",
+            "assign": { "marks": "{{ vars.marks + 'y' }}" }
+          }
+        }
+      ],
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1"
+      },
+      "output": "{{ vars.marks }}",
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

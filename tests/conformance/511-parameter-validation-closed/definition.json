@@ -1,0 +1,24 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 511: an undeclared argument fails closed-by-default validation.",
+  "flows": {
+    "NoParams": {
+      "entrypoint": "done",
+      "steps": {
+        "done": { "action": "Return" }
+      }
+    }
+  },
+  "entrypoint": "run",
+  "steps": {
+    "run": {
+      "action": "Call",
+      "call": {
+        "flow": "NoParams",
+        "with": { "unexpected": true }
+      },
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

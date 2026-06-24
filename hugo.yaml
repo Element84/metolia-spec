@@ -1,0 +1,86 @@
+baseURL: "https://element84.github.io/metolia-spec/"
+title: "Metolia Workflow Language"
+languageCode: "en-us"
+
+module:
+  imports:
+    - path: github.com/imfing/hextra
+
+enableInlineShortcodes: true
+enableRobotsTXT: true
+enableGitInfo: false
+
+markup:
+  goldmark:
+    renderer:
+      unsafe: true
+    parser:
+      attribute:
+        block: true
+  highlight:
+    noClasses: false
+  tableOfContents:
+    startLevel: 2
+    endLevel: 4
+
+mediaTypes:
+  text/markdown:
+    suffixes: ["md"]
+
+outputFormats:
+  SpecMarkdown:
+    mediaType: text/markdown
+    baseName: spec
+    isPlainText: true
+    notAlternative: true
+
+params:
+  description: "Metolia Workflow Language — Specification"
+
+  navbar:
+    displayTitle: true
+    displayLogo: false
+
+  theme:
+    default: system
+    displayToggle: true
+
+  footer:
+    enable: true
+    displayCopyright: false
+    displayPoweredBy: true
+
+  page:
+    width: normal
+
+  toc:
+    displayTags: true
+
+  search:
+    enable: true
+    type: flexsearch
+    flexsearch:
+      index: content
+      tokenize: forward
+
+  editURL:
+    enable: false
+
+menu:
+  main:
+    - identifier: guide
+      name: Guide
+      pageRef: /guide
+      weight: 5
+    - identifier: reference
+      name: Reference
+      pageRef: /reference
+      weight: 10
+    - identifier: rationale
+      name: Rationale
+      pageRef: /rationale
+      weight: 15
+    - name: Search
+      weight: 20
+      params:
+        type: search

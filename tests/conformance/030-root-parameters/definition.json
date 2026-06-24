@@ -1,0 +1,18 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 030: the platform is the root frame's caller; its arguments meet parameters at frame entry.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "greeting": { "type": "string", "default": "hello" },
+      "name": { "type": "string", "default": "world" }
+    }
+  },
+  "entrypoint": "emit",
+  "steps": {
+    "emit": {
+      "action": "Return",
+      "value": "{{ vars.greeting + ' ' + vars.name }}"
+    }
+  }
+}

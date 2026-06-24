@@ -1,0 +1,11 @@
+{
+  "description": "onEntry output and onSuccess value shape descent and ascent.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core",
+    "https://mwl.dev/v0.1/conformance/expressions/cel"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

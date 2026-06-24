@@ -1,0 +1,11 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 701: a partial delimiter pair is a literal, not an expression.",
+  "entrypoint": "emit",
+  "steps": {
+    "emit": {
+      "action": "Return",
+      "value": "{{ step.input }} is a literal here"
+    }
+  }
+}

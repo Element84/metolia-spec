@@ -1,0 +1,8 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 220: a bare Raise with no active failure.",
+  "entrypoint": "reraise",
+  "steps": {
+    "reraise": { "action": "Raise" }
+  }
+}

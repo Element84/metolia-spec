@@ -1,0 +1,12 @@
+{
+  "description": "Timeout preempts a slow dispatch.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [
+    "temporal"
+  ],
+  "scenarios": {
+    "base": {}
+  }
+}

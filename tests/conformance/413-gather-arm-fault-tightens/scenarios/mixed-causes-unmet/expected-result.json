@@ -1,0 +1,23 @@
+{
+  "type": "error",
+  "code": "System.GatherCompletionUnmet",
+  "details": {
+    "failures": [
+      {
+        "index": 1,
+        "result": {
+          "type": "error",
+          "code": "Conformance.InjectedFailure"
+        }
+      },
+      {
+        "index": 2,
+        "result": {
+          "type": "error",
+          "code": "System.ExpressionEvaluationError"
+        }
+      }
+    ],
+    "failureCount": 2
+  }
+}

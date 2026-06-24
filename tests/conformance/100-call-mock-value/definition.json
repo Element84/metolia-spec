@@ -1,0 +1,16 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 100: a basic dispatch producing a configured value.",
+  "entrypoint": "get",
+  "steps": {
+    "get": {
+      "action": "Call",
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": { "value": "hello" }
+      },
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

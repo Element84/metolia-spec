@@ -1,0 +1,5 @@
+[
+  { "with": { "value": "a", "delay": "PT0.3S" }, "faultArm": false },
+  { "with": { "value": "b", "delay": "PT0.2S" }, "faultArm": false },
+  { "with": { "value": "c", "delay": "PT0.1S" }, "faultArm": false }
+]

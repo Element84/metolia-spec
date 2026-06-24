@@ -1,0 +1,17 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Invalid: a present matcher member must be a non-empty list.",
+  "entrypoint": "a",
+  "steps": {
+    "a": {
+      "action": "Call",
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": {}
+      },
+      "next": "b",
+      "catch": [{ "match": { "codes": [] }, "next": "b" }]
+    },
+    "b": { "action": "Return" }
+  }
+}

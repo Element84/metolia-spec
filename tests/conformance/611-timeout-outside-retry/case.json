@@ -1,0 +1,12 @@
+{
+  "description": "A bound outside Retry budgets all attempts together.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [
+    "temporal"
+  ],
+  "scenarios": {
+    "base": {}
+  }
+}

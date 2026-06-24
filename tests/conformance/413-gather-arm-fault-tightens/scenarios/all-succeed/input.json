@@ -1,0 +1,5 @@
+[
+  { "with": { "value": "a" }, "faultArm": false },
+  { "with": { "value": "b" }, "faultArm": false },
+  { "with": { "value": "c" }, "faultArm": false }
+]

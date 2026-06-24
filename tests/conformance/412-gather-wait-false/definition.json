@@ -1,0 +1,23 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 412: one success satisfies the policy; the slow dispatch is not awaited.",
+  "entrypoint": "fan-out",
+  "steps": {
+    "fan-out": {
+      "action": "Gather",
+      "calls": [
+        {
+          "provider": "mwl:provider.call/mwl/mock/v1",
+          "with": { "value": "fast" }
+        },
+        {
+          "provider": "mwl:provider.call/mwl/mock/v1",
+          "with": { "value": "slow", "delay": "PT30S" }
+        }
+      ],
+      "completion": { "successes": 1, "wait": false },
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

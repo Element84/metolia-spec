@@ -1,0 +1,8 @@
+{
+  "type": "error",
+  "code": "Conformance.Rejected",
+  "message": "rejected by policy",
+  "details": { "reason": "conformance" },
+  "retryable": false,
+  "previous": null
+}

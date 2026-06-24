@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Conformance case metadata",
+  "description": "The shape of a conformance case's case.json: machine-readable metadata about the case, kept beside the definition rather than inside it so the definition stays a pristine example workflow. Defined for this suite.",
+  "type": "object",
+  "required": ["description", "profiles", "marks", "scenarios"],
+  "properties": {
+    "description": {
+      "description": "A one-line statement of the pattern the case demonstrates.",
+      "type": "string"
+    },
+    "profiles": {
+      "description": "The conformance claim the case requires, as the profile URIs defined in the reference's Conformance appendix: the full claim, not a delta. Every case includes the Core URI, since a conformance claim always includes Core; an expression case adds the CEL profile, and a case relying on a CEL extension would add that extension's profile. A runner selects the case by matching these URIs, character for character, against the implementation's conformance claim.",
+      "type": "array",
+      "uniqueItems": true,
+      "minItems": 1,
+      "items": {
+        "enum": [
+          "https://mwl.dev/v0.1/conformance/core",
+          "https://mwl.dev/v0.1/conformance/expressions/cel",
+          "https://mwl.dev/v0.1/conformance/expressions/cel/strings",
+          "https://mwl.dev/v0.1/conformance/expressions/cel/lists",
+          "https://mwl.dev/v0.1/conformance/expressions/cel/sets",
+          "https://mwl.dev/v0.1/conformance/expressions/cel/encoders",
+          "https://mwl.dev/v0.1/conformance/expressions/cel/math"
+        ]
+      }
+    },
+    "marks": {
+      "description": "Runner-facing execution marks, distinct from conformance profiles: traits that affect how a runner executes the case, not which profiles an implementation must claim. temporal marks a case whose outcome depends on real elapsed time, so the run takes wall-clock time. An empty array means no marks apply.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": ["temporal"]
+      }
+    },
+    "scenarios": {
+      "description": "The case's scenarios, keyed by name: each is one execution of the definition, with its data files in the scenarios/<name>/ directory of the same name. A case with a single scenario conventionally names it base.",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "description": "A one-line statement of what the scenario's inputs probe. Omitted when the case description already covers it, as in a single-scenario case.",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

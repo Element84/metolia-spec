@@ -1,0 +1,12 @@
+{
+  "description": "wait: false abandons the unfinished dispatch; the projection excludes it.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [
+    "temporal"
+  ],
+  "scenarios": {
+    "base": {}
+  }
+}

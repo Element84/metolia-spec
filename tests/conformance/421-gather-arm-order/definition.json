@@ -1,0 +1,26 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 421: each arm appends its element; the order is dispatch order.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "marks": { "type": "string", "default": "" }
+    }
+  },
+  "entrypoint": "fan-out",
+  "steps": {
+    "fan-out": {
+      "action": "Gather",
+      "over": "{{ step.input }}",
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "onSuccess": {
+          "assign": { "marks": "{{ vars.marks + call.input }}" }
+        }
+      },
+      "output": "{{ vars.marks }}",
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://mwl.dev/v0.1/provider/schema.json",
+  "uri": "mwl:provider.middleware/mwl/loop/v1",
+  "codePrefix": "Loop",
+  "description": "Re-runs its inner scope while its continuation holds. Configured entirely by when: onEntry.when admits the first run; onSuccess.when, which a Loop entry must write, decides after each success whether to run again. The onSuccess value product is the carried value, fed to the next run as its input.",
+  "attachment": ["step", "flow"],
+  "phases": {
+    "onEntry": {
+      "action": {
+        "kind": "control",
+        "description": "Admits the loop. The action owns every run of the inner scope, including the first: gated off, no run occurs and the entry emits its onEntry output product as a success Result."
+      }
+    },
+    "onSuccess": {
+      "action": {
+        "kind": "control",
+        "description": "The continuation: when true, re-enters the inner scope with the phase's value product as the next run's input; when false, the entry emits."
+      }
+    }
+  },
+  "metadata": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "iteration": {
+        "type": "number",
+        "description": "The run of the inner scope currently executing or, in an onSuccess run, just completed; 1 on the first run."
+      }
+    }
+  },
+  "failureCatalog": {
+    "closed": [],
+    "open": []
+  }
+}

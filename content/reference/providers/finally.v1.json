@@ -1,0 +1,36 @@
+{
+  "$schema": "https://mwl.dev/v0.1/provider/schema.json",
+  "uri": "mwl:provider.middleware/mwl/finally/v1",
+  "codePrefix": "Finally",
+  "description": "Dispatches a cleanup call on every exit. The cleanup's Result is discarded; a failed cleanup supersedes the Result in flight under the onAlways rules, carrying its originator's code.",
+  "attachment": ["step", "flow"],
+  "phases": {
+    "onAlways": {
+      "action": {
+        "kind": "side-effect",
+        "description": "Dispatches the configured call, wrapped by the configured middleware stack. Gated off, nothing is dispatched."
+      },
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["call"],
+        "properties": {
+          "call": {
+            "type": "object",
+            "description": "The cleanup dispatch: a call object, taken structurally."
+          },
+          "middleware": {
+            "type": "array",
+            "items": { "type": "object" },
+            "description": "A middleware stack around the cleanup dispatch, taken structurally."
+          }
+        }
+      },
+      "structural": ["call", "middleware"]
+    }
+  },
+  "failureCatalog": {
+    "closed": [],
+    "open": []
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 600: every attempt fails; the Retry budget exhausts.",
+  "entrypoint": "flaky",
+  "steps": {
+    "flaky": {
+      "action": "Call",
+      "middleware": [
+        {
+          "provider": "mwl:provider.middleware/mwl/retry/v1",
+          "onEntry": {
+            "with": {
+              "policies": [
+                {
+                  "match": {
+                    "codes": [
+                      "Conformance.*"
+                    ]
+                  },
+                  "attempts": 2
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": {
+          "failure": {
+            "code": "Conformance.InjectedFailure",
+            "message": "injected"
+          }
+        }
+      },
+      "next": "done"
+    },
+    "done": {
+      "action": "Return"
+    }
+  }
+}

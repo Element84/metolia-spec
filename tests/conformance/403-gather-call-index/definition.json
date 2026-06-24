@@ -1,0 +1,17 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 403: call.index configures each dispatch.",
+  "entrypoint": "fan-out",
+  "steps": {
+    "fan-out": {
+      "action": "Gather",
+      "over": "{{ step.input }}",
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": { "value": "{{ call.index }}" }
+      },
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

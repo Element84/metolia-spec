@@ -1,0 +1,10 @@
+{
+  "description": "A gated-off Retry entry is transparent.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

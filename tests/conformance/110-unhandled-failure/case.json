@@ -1,0 +1,10 @@
+{
+  "description": "An uncaught failure becomes the Flow's Result.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

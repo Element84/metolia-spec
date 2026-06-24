@@ -1,0 +1,29 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 300: ordered clause selection over a routing Match.",
+  "entrypoint": "route",
+  "steps": {
+    "route": {
+      "action": "Match",
+      "cases": [
+        {
+          "when": "{{ match.input.status == 'approved' && match.input.amount > 1000.0 }}",
+          "output": "manual-review",
+          "next": "done"
+        },
+        {
+          "when": "{{ match.input.status == 'approved' }}",
+          "output": "auto-approve",
+          "next": "done"
+        }
+      ],
+      "default": {
+        "output": "rejected",
+        "next": "done"
+      }
+    },
+    "done": {
+      "action": "Return"
+    }
+  }
+}

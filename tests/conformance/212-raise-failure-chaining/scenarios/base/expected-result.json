@@ -1,0 +1,10 @@
+{
+  "type": "error",
+  "code": "Conformance.WrappedFailure",
+  "message": "wrapped",
+  "previous": {
+    "type": "error",
+    "code": "Conformance.InjectedFailure",
+    "message": "injected"
+  }
+}

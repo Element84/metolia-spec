@@ -1,0 +1,60 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 604: a non-null onFailure delay overrides the gap's backoff delay, used as-is.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "tries": {
+        "type": "string",
+        "default": ""
+      }
+    }
+  },
+  "entrypoint": "flaky",
+  "steps": {
+    "flaky": {
+      "action": "Call",
+      "middleware": [
+        {
+          "provider": "mwl:provider.middleware/mwl/retry/v1",
+          "onEntry": {
+            "with": {
+              "policies": [
+                {
+                  "match": {
+                    "codes": [
+                      "Conformance.*"
+                    ]
+                  },
+                  "attempts": 2,
+                  "backoff": {
+                    "initial": "PT1H"
+                  }
+                }
+              ]
+            }
+          },
+          "onFailure": {
+            "with": {
+              "delay": "{{ middleware.result.details.retryAfter }}"
+            },
+            "assign": {
+              "tries": "{{ vars.tries + 'x' }}"
+            }
+          }
+        }
+      ],
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": {
+          "value": "recovered",
+          "failure": "{{ size(vars.tries) < 1 ? {'code': 'Conformance.InjectedFailure', 'message': 'injected', 'details': {'retryAfter': 'PT0S'}} : null }}"
+        }
+      },
+      "next": "done"
+    },
+    "done": {
+      "action": "Return"
+    }
+  }
+}

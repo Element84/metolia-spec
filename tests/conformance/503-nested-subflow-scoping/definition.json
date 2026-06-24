@@ -1,0 +1,39 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 503: three frames deep, every Flow reusing the same Step names.",
+  "flows": {
+    "Outer": {
+      "flows": {
+        "Inner": {
+          "entrypoint": "go",
+          "steps": {
+            "go": {
+              "action": "Pass",
+              "output": "{{ step.input + '!' }}",
+              "next": "done"
+            },
+            "done": { "action": "Return" }
+          }
+        }
+      },
+      "entrypoint": "go",
+      "steps": {
+        "go": {
+          "action": "Call",
+          "call": { "flow": "Inner" },
+          "next": "done"
+        },
+        "done": { "action": "Return" }
+      }
+    }
+  },
+  "entrypoint": "go",
+  "steps": {
+    "go": {
+      "action": "Call",
+      "call": { "flow": "Outer" },
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

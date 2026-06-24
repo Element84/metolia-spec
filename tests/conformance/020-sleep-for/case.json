@@ -1,0 +1,12 @@
+{
+  "description": "A pure pause; the value passes through unchanged.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [
+    "temporal"
+  ],
+  "scenarios": {
+    "base": {}
+  }
+}

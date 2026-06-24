@@ -1,0 +1,29 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 502: the caller's binding is invisible in the subflow's frame.",
+  "flows": {
+    "Leak": {
+      "entrypoint": "read",
+      "steps": {
+        "read": {
+          "action": "Return",
+          "value": "{{ vars.secret }}"
+        }
+      }
+    }
+  },
+  "entrypoint": "seed",
+  "steps": {
+    "seed": {
+      "action": "Pass",
+      "assign": { "secret": "s3cret" },
+      "next": "run"
+    },
+    "run": {
+      "action": "Call",
+      "call": { "flow": "Leak" },
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

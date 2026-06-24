@@ -1,0 +1,16 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 101: the call's input expression shapes the payload; the mock echoes it.",
+  "entrypoint": "echo",
+  "steps": {
+    "echo": {
+      "action": "Call",
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "input": "{{ {'echoed': call.input.msg, 'shaped': true} }}"
+      },
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

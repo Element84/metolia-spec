@@ -1,0 +1,9 @@
+{
+  "$schema": "https://mwl.dev/v0.1/provider/schema.json",
+  "uri": "mwl:provider.call/example/http/v1",
+  "codePrefix": "Http",
+  "description": "A call provider wrongly declaring the middleware-only attachment field.",
+  "parameters": { "type": "object" },
+  "failureCatalog": { "closed": [], "open": [] },
+  "attachment": ["step"]
+}

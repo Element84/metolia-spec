@@ -1,0 +1,41 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 213: an explicit previous: null drops the failure history.",
+  "entrypoint": "fail",
+  "steps": {
+    "fail": {
+      "action": "Call",
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": {
+          "failure": {
+            "code": "Conformance.InjectedFailure",
+            "message": "injected"
+          }
+        }
+      },
+      "next": "done",
+      "catch": [
+        {
+          "match": {
+            "codes": [
+              "*"
+            ]
+          },
+          "next": "wrap"
+        }
+      ]
+    },
+    "wrap": {
+      "action": "Raise",
+      "result": {
+        "code": "Conformance.WrappedFailure",
+        "message": "wrapped without history",
+        "previous": null
+      }
+    },
+    "done": {
+      "action": "Return"
+    }
+  }
+}

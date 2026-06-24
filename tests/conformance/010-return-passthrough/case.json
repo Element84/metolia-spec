@@ -1,0 +1,15 @@
+{
+  "description": "The minimal Flow; Return's passthrough default.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [],
+  "scenarios": {
+    "basic": {
+      "description": "A simple object passes through to the success Result unchanged."
+    },
+    "data-fidelity": {
+      "description": "A structurally rich value round-trips intact: unicode, escapes, safe-range integers, decimals, booleans, null members, empty and nested containers."
+    }
+  }
+}

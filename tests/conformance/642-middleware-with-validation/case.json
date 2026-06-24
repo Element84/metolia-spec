@@ -1,0 +1,10 @@
+{
+  "description": "A phase with failing its schema fails from the entry's position.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

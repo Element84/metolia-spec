@@ -1,0 +1,10 @@
+{
+  "description": "Closed-by-default validation: an undeclared argument fails.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

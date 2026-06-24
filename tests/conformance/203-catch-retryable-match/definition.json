@@ -1,0 +1,48 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 203: a retryable member matches only a failure asserting the same explicit value; an unset signal matches neither.",
+  "entrypoint": "probe",
+  "steps": {
+    "probe": {
+      "action": "Call",
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": {
+          "failure": "{{ {'code': 'Conformance.InjectedFailure', 'message': 'injected', 'retryable': step.input.retryable} }}"
+        }
+      },
+      "next": "done",
+      "catch": [
+        {
+          "match": {
+            "retryable": true
+          },
+          "output": "asserted-retryable",
+          "next": "recover"
+        },
+        {
+          "match": {
+            "retryable": false
+          },
+          "output": "asserted-non-retryable",
+          "next": "recover"
+        },
+        {
+          "match": {
+            "codes": [
+              "*"
+            ]
+          },
+          "output": "unset-signal",
+          "next": "recover"
+        }
+      ]
+    },
+    "recover": {
+      "action": "Return"
+    },
+    "done": {
+      "action": "Return"
+    }
+  }
+}

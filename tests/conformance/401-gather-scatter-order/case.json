@@ -1,0 +1,10 @@
+{
+  "description": "Scatter fan-out, mixing provider and inline-flow targets.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

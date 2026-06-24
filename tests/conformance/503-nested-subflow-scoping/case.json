@@ -1,0 +1,11 @@
+{
+  "description": "Nested frames reuse Step names; scoping is per steps map.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core",
+    "https://mwl.dev/v0.1/conformance/expressions/cel"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

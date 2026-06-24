@@ -1,0 +1,10 @@
+{
+  "type": "error",
+  "code": "Conformance.CleanupFailed",
+  "message": "cleanup failed",
+  "previous": {
+    "type": "error",
+    "code": "Conformance.InjectedFailure",
+    "message": "injected"
+  }
+}

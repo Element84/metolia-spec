@@ -1,0 +1,22 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 302: a faulting predicate is an evaluation error, not a non-match.",
+  "entrypoint": "route",
+  "steps": {
+    "route": {
+      "action": "Match",
+      "cases": [
+        {
+          "when": "{{ match.input.status == 'approved' }}",
+          "output": "approved",
+          "next": "done"
+        }
+      ],
+      "default": {
+        "output": "fallback",
+        "next": "done"
+      }
+    },
+    "done": { "action": "Return" }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 103: capture at the failure arm, the failed dispatch's live seam.",
+  "entrypoint": "fetch",
+  "steps": {
+    "fetch": {
+      "action": "Call",
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": {
+          "failure": {
+            "code": "Conformance.InjectedFailure",
+            "message": "injected"
+          },
+          "metadata": {
+            "requestId": "r-9"
+          }
+        },
+        "onFailure": {
+          "assign": {
+            "rid": "{{ provider.metadata.requestId }}"
+          }
+        }
+      },
+      "next": "done",
+      "catch": [
+        {
+          "match": {
+            "codes": [
+              "*"
+            ]
+          },
+          "next": "report"
+        }
+      ]
+    },
+    "report": {
+      "action": "Return",
+      "value": "{{ vars.rid }}"
+    },
+    "done": {
+      "action": "Return"
+    }
+  }
+}

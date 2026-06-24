@@ -1,0 +1,45 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 510: a subflow's raised failure is caught by the caller.",
+  "flows": {
+    "Fail": {
+      "entrypoint": "boom",
+      "steps": {
+        "boom": {
+          "action": "Raise",
+          "result": {
+            "code": "Conformance.SubflowFailed",
+            "message": "subflow failed"
+          }
+        }
+      }
+    }
+  },
+  "entrypoint": "run",
+  "steps": {
+    "run": {
+      "action": "Call",
+      "call": {
+        "flow": "Fail"
+      },
+      "next": "done",
+      "catch": [
+        {
+          "match": {
+            "codes": [
+              "Conformance.SubflowFailed"
+            ]
+          },
+          "output": "caught",
+          "next": "recover"
+        }
+      ]
+    },
+    "recover": {
+      "action": "Return"
+    },
+    "done": {
+      "action": "Return"
+    }
+  }
+}

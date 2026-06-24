@@ -1,0 +1,23 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 622: no run occurs; the received value emits as the success.",
+  "entrypoint": "skip",
+  "steps": {
+    "skip": {
+      "action": "Call",
+      "middleware": [
+        {
+          "provider": "mwl:provider.middleware/mwl/loop/v1",
+          "onEntry": { "when": false },
+          "onSuccess": { "when": false }
+        }
+      ],
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": { "value": "never-runs" }
+      },
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

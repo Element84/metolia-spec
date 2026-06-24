@@ -1,0 +1,8 @@
+{
+  "type": "error",
+  "code": "Conformance.InjectedFailure",
+  "message": "injected",
+  "details": { "hint": "conformance" },
+  "retryable": true,
+  "previous": null
+}

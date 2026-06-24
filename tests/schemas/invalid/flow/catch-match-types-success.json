@@ -1,0 +1,17 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Invalid: success is not a permissible failure-matcher type; a matcher selects among failures only.",
+  "entrypoint": "a",
+  "steps": {
+    "a": {
+      "action": "Call",
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": {}
+      },
+      "next": "b",
+      "catch": [{ "match": { "types": ["success"] }, "next": "b" }]
+    },
+    "b": { "action": "Return" }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 400: iterate fan-out; each dispatch echoes its element.",
+  "entrypoint": "fan-out",
+  "steps": {
+    "fan-out": {
+      "action": "Gather",
+      "over": "{{ step.input }}",
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1"
+      },
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

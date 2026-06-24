@@ -1,0 +1,16 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "entrypoint": "a",
+  "flows": {
+    "Sub": {
+      "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+      "entrypoint": "s",
+      "steps": {
+        "s": { "action": "Return" }
+      }
+    }
+  },
+  "steps": {
+    "a": { "action": "Return" }
+  }
+}

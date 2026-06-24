@@ -1,0 +1,4 @@
+{
+  "type": "success",
+  "value": { "echoed": "hi", "shaped": true }
+}

@@ -1,0 +1,63 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 651: the graph raises twice, then routes to success on the third run.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "tries": {
+        "type": "string",
+        "default": ""
+      }
+    }
+  },
+  "middleware": [
+    {
+      "provider": "mwl:provider.middleware/mwl/retry/v1",
+      "onEntry": {
+        "with": {
+          "policies": [
+            {
+              "match": {
+                "codes": [
+                  "Conformance.*"
+                ]
+              },
+              "attempts": 3
+            }
+          ]
+        }
+      },
+      "onFailure": {
+        "assign": {
+          "tries": "{{ vars.tries + 'x' }}"
+        }
+      }
+    }
+  ],
+  "entrypoint": "decide",
+  "steps": {
+    "decide": {
+      "action": "Match",
+      "cases": [
+        {
+          "when": "{{ size(vars.tries) < 2 }}",
+          "next": "boom"
+        }
+      ],
+      "default": {
+        "next": "ok"
+      }
+    },
+    "boom": {
+      "action": "Raise",
+      "result": {
+        "code": "Conformance.InjectedFailure",
+        "message": "not yet"
+      }
+    },
+    "ok": {
+      "action": "Return",
+      "value": "graph-recovered"
+    }
+  }
+}

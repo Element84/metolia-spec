@@ -1,0 +1,40 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 211: a caught failure is re-emitted unchanged by a bare Raise.",
+  "entrypoint": "fail",
+  "steps": {
+    "fail": {
+      "action": "Call",
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": {
+          "failure": {
+            "code": "Conformance.InjectedFailure",
+            "message": "injected",
+            "details": {
+              "hint": "conformance"
+            },
+            "retryable": true
+          }
+        }
+      },
+      "next": "done",
+      "catch": [
+        {
+          "match": {
+            "codes": [
+              "*"
+            ]
+          },
+          "next": "reraise"
+        }
+      ]
+    },
+    "reraise": {
+      "action": "Raise"
+    },
+    "done": {
+      "action": "Return"
+    }
+  }
+}

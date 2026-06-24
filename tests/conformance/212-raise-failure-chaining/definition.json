@@ -1,0 +1,40 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 212: a constructed failure chains the one being handled.",
+  "entrypoint": "fail",
+  "steps": {
+    "fail": {
+      "action": "Call",
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": {
+          "failure": {
+            "code": "Conformance.InjectedFailure",
+            "message": "injected"
+          }
+        }
+      },
+      "next": "done",
+      "catch": [
+        {
+          "match": {
+            "codes": [
+              "*"
+            ]
+          },
+          "next": "wrap"
+        }
+      ]
+    },
+    "wrap": {
+      "action": "Raise",
+      "result": {
+        "code": "Conformance.WrappedFailure",
+        "message": "wrapped"
+      }
+    },
+    "done": {
+      "action": "Return"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 642: a bare Retry entry fails its required onEntry parameters.",
+  "entrypoint": "fetch",
+  "steps": {
+    "fetch": {
+      "action": "Call",
+      "middleware": [
+        { "provider": "mwl:provider.middleware/mwl/retry/v1" }
+      ],
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": { "value": "never-runs" }
+      },
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

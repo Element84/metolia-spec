@@ -1,0 +1,17 @@
+/* Custom tweaks on top of Hextra defaults */
+
+/* Slightly wider prose for long technical content */
+.hextra-content {
+  max-width: 80ch;
+}
+
+/* Tighter line-height inside code blocks */
+.hextra-code-block pre {
+  line-height: 1.5;
+}
+
+/* Top-align card contents. Hextra wraps title+subtitle cards in an inner
+   div with mt-auto, which pushes them to the bottom of the flex column. */
+.hextra-card > div {
+  margin-top: 0;
+}

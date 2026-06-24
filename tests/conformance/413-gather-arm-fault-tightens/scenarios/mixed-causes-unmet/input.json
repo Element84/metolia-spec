@@ -1,0 +1,13 @@
+[
+  { "with": { "value": "a" }, "faultArm": false },
+  {
+    "with": {
+      "failure": {
+        "code": "Conformance.InjectedFailure",
+        "message": "settled failure"
+      }
+    },
+    "faultArm": false
+  },
+  { "with": { "value": "c" }, "faultArm": true }
+]

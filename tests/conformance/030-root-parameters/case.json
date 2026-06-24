@@ -1,0 +1,19 @@
+{
+  "description": "Root-frame parameters: defaults, platform overlay, closed validation.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core",
+    "https://mwl.dev/v0.1/conformance/expressions/cel"
+  ],
+  "marks": [],
+  "scenarios": {
+    "defaults": {
+      "description": "No arguments supplied; both parameters bind their schema defaults."
+    },
+    "overlay": {
+      "description": "One argument supplied, one defaulted; the two compose in vars."
+    },
+    "undeclared-argument": {
+      "description": "An undeclared argument fails closed-by-default validation; the failure is the execution's Result."
+    }
+  }
+}

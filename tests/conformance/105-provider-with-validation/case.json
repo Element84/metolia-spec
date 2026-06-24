@@ -1,0 +1,10 @@
+{
+  "description": "An undeclared provider argument fails with validation.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

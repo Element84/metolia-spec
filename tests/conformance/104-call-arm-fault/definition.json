@@ -1,0 +1,19 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 104: the target succeeds but the success arm faults.",
+  "entrypoint": "fetch",
+  "steps": {
+    "fetch": {
+      "action": "Call",
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": { "value": "ok" },
+        "onSuccess": {
+          "value": "{{ call.result.value.missing.member }}"
+        }
+      },
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

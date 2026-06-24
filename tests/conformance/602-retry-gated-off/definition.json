@@ -1,0 +1,43 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 602: when false disarms the entry; the failure passes once.",
+  "entrypoint": "flaky",
+  "steps": {
+    "flaky": {
+      "action": "Call",
+      "middleware": [
+        {
+          "provider": "mwl:provider.middleware/mwl/retry/v1",
+          "onEntry": {
+            "when": false,
+            "with": {
+              "policies": [
+                {
+                  "match": {
+                    "codes": [
+                      "Conformance.*"
+                    ]
+                  },
+                  "attempts": 3
+                }
+              ]
+            }
+          }
+        }
+      ],
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": {
+          "failure": {
+            "code": "Conformance.InjectedFailure",
+            "message": "injected"
+          }
+        }
+      },
+      "next": "done"
+    },
+    "done": {
+      "action": "Return"
+    }
+  }
+}

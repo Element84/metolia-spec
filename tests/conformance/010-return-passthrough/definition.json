@@ -1,0 +1,8 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 010: the minimal Flow, returning its input unchanged.",
+  "entrypoint": "done",
+  "steps": {
+    "done": { "action": "Return" }
+  }
+}

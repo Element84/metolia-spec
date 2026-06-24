@@ -1,0 +1,10 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "entrypoint": "a",
+  "steps": {
+    "a": {
+      "action": "Raise",
+      "result": { "message": "no code" }
+    }
+  }
+}

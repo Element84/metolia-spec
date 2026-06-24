@@ -1,0 +1,26 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 413: until reads settled Results; an onSuccess arm fault tightens the outcome, and the Gather's verdict is computed after the arms run.",
+  "parameters": {
+    "type": "object",
+    "properties": { "successes": { "type": "number" } },
+    "required": ["successes"]
+  },
+  "entrypoint": "fan-out",
+  "steps": {
+    "fan-out": {
+      "action": "Gather",
+      "over": "{{ step.input }}",
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": "{{ call.input.with }}",
+        "onSuccess": {
+          "value": "{{ call.input.faultArm ? call.result.value.nope.deeper : call.result.value }}"
+        }
+      },
+      "completion": { "successes": "{{ vars.successes }}" },
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

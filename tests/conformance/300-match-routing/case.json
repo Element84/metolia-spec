@@ -1,0 +1,16 @@
+{
+  "description": "Match clause selection: ordered cases and the default route.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core",
+    "https://mwl.dev/v0.1/conformance/expressions/cel"
+  ],
+  "marks": [],
+  "scenarios": {
+    "first-clause-wins": {
+      "description": "Both case predicates hold; the first clause in order is selected."
+    },
+    "default-routes": {
+      "description": "No case predicate holds; selection falls through to default."
+    }
+  }
+}

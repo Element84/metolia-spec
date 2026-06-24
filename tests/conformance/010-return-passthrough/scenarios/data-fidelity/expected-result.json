@@ -1,0 +1,13 @@
+{
+  "type": "success",
+  "value": {
+    "string": "héllo wörld — ünïcøde ✓ 日本語",
+    "escaped": "line\nbreak\ttab \"quotes\" \\backslash",
+    "integers": [0, -1, 42, 9007199254740991],
+    "decimals": [0.5, -2.25, 1000000.5],
+    "booleans": [true, false],
+    "nothing": null,
+    "empty": { "object": {}, "array": [] },
+    "nested": { "a": [{ "b": [null, { "c": "deep" }] }] }
+  }
+}

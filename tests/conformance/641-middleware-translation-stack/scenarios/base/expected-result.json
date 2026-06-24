@@ -1,0 +1,18 @@
+{
+  "type": "error",
+  "code": "Conformance.Outer",
+  "message": "injected",
+  "details": { "layer": "inner" },
+  "previous": {
+    "type": "error",
+    "code": "Conformance.Inner",
+    "message": "injected",
+    "details": { "layer": "inner" },
+    "previous": {
+      "type": "error",
+      "code": "Conformance.InjectedFailure",
+      "message": "injected",
+      "previous": null
+    }
+  }
+}

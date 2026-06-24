@@ -1,0 +1,10 @@
+{
+  "description": "A failed Finally cleanup supersedes the Result in flight.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

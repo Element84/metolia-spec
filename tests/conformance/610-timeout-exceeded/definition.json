@@ -1,0 +1,27 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 610: the bound elapses before the delayed dispatch resolves.",
+  "entrypoint": "slow",
+  "steps": {
+    "slow": {
+      "action": "Call",
+      "middleware": [
+        {
+          "provider": "mwl:provider.middleware/mwl/timeout/v1",
+          "onEntry": {
+            "with": { "duration": "PT1S" }
+          }
+        }
+      ],
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": {
+          "delay": "PT10S",
+          "value": "never"
+        }
+      },
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

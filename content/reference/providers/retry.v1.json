@@ -1,0 +1,128 @@
+{
+  "$schema": "https://mwl.dev/v0.1/provider/schema.json",
+  "uri": "mwl:provider.middleware/mwl/retry/v1",
+  "codePrefix": "Retry",
+  "description": "Re-runs its inner scope on matching failures. Policies are captured at first entry; each rising failure runs the onFailure phase, whose action matches it against the policies in order and re-enters while the matching policy's attempt budget lasts. Re-entry restores the frame's variables to their state following the entry's onEntry evaluation; the gap's assign is the carry: evaluated against the pre-restore state, applied to the restored variables. No restore occurs on the final emission.",
+  "attachment": ["step", "flow"],
+  "phases": {
+    "onEntry": {
+      "action": {
+        "kind": "control",
+        "description": "Arms the entry: evaluates and captures the retry policies. Gated off, the entry is transparent and failures pass through."
+      },
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["policies"],
+        "properties": {
+          "policies": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Scanned in array order; the first policy whose match matches a rising failure handles it. Each policy counts its attempts independently.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["match", "attempts"],
+              "properties": {
+                "match": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "additionalProperties": false,
+                  "description": "The failure matcher naming which failures the policy handles: every member present must match.",
+                  "properties": {
+                    "codes": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": { "type": "string" },
+                      "description": "Failure-code patterns: Prefix.Code, Prefix.*, or *. Matches when the failure's code matches any pattern."
+                    },
+                    "types": {
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "string",
+                        "not": { "const": "success" }
+                      },
+                      "description": "Non-success Result type names. Matches when the failure's type is any of them."
+                    },
+                    "retryable": {
+                      "type": "boolean",
+                      "description": "Matches only a failure asserting the same explicit retryable value; an unset signal matches neither."
+                    }
+                  }
+                },
+                "attempts": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "The policy's attempt budget, counting the first run."
+                },
+                "backoff": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["initial"],
+                  "description": "Backoff timing. Absent, retries are immediate.",
+                  "properties": {
+                    "initial": {
+                      "type": "string",
+                      "format": "duration",
+                      "description": "The delay before the first retry, as an ISO 8601 duration."
+                    },
+                    "rate": {
+                      "type": "number",
+                      "minimum": 1,
+                      "default": 1,
+                      "description": "The multiplier applied to the delay between consecutive retries."
+                    },
+                    "max": {
+                      "type": "string",
+                      "format": "duration",
+                      "description": "A cap on the per-retry delay."
+                    },
+                    "jitter": {
+                      "type": "string",
+                      "enum": ["none", "full", "equal", "decorrelated"],
+                      "default": "none",
+                      "description": "The jitter mode applied to each computed delay."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "onFailure": {
+      "action": {
+        "kind": "control",
+        "description": "Matches the rising failure against the captured policies and re-enters the inner scope while the matching policy's budget lasts; a non-null delay overrides the gap's backoff delay, used as-is. Exhaustion emits Provider.Middleware.Retry.Exhausted with the final failure as previous and details {attempts, policy}. Gated off, the failure passes through."
+      },
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "delay": {
+            "type": ["string", "null"],
+            "format": "duration",
+            "default": null,
+            "description": "A per-failure override of the gap's delay, as an ISO 8601 duration: non-null on a consumed failure, the wait before re-entry, in place of the matched policy's backoff delay and without jitter. Unread on pass-through and exhaustion."
+          }
+        }
+      }
+    }
+  },
+  "metadata": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "attempt": {
+        "type": "number",
+        "description": "Runs of the inner scope so far, counting the first."
+      }
+    }
+  },
+  "failureCatalog": {
+    "closed": ["Provider.Middleware.Retry.Exhausted"],
+    "open": []
+  }
+}

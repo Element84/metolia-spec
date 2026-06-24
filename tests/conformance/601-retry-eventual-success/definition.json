@@ -1,0 +1,54 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 601: fail twice then succeed, counting attempts in a carried variable.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "tries": {
+        "type": "string",
+        "default": ""
+      }
+    }
+  },
+  "entrypoint": "flaky",
+  "steps": {
+    "flaky": {
+      "action": "Call",
+      "middleware": [
+        {
+          "provider": "mwl:provider.middleware/mwl/retry/v1",
+          "onEntry": {
+            "with": {
+              "policies": [
+                {
+                  "match": {
+                    "codes": [
+                      "Conformance.*"
+                    ]
+                  },
+                  "attempts": 3
+                }
+              ]
+            }
+          },
+          "onFailure": {
+            "assign": {
+              "tries": "{{ vars.tries + 'x' }}"
+            }
+          }
+        }
+      ],
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": {
+          "value": "recovered",
+          "failure": "{{ size(vars.tries) < 2 ? {'code': 'Conformance.InjectedFailure', 'message': 'injected'} : null }}"
+        }
+      },
+      "next": "done"
+    },
+    "done": {
+      "action": "Return"
+    }
+  }
+}

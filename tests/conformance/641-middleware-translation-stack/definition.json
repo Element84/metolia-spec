@@ -1,0 +1,44 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 641: the rising failure is translated twice, inner first.",
+  "entrypoint": "fail",
+  "steps": {
+    "fail": {
+      "action": "Call",
+      "middleware": [
+        {
+          "provider": "mwl:provider.middleware/mwl/timeout/v1",
+          "onEntry": {
+            "with": { "duration": "PT1H" }
+          },
+          "onFailure": {
+            "code": "Conformance.Outer"
+          },
+          "comment": "The outer translation: the final word on the envelope."
+        },
+        {
+          "provider": "mwl:provider.middleware/mwl/timeout/v1",
+          "onEntry": {
+            "with": { "duration": "PT1H" }
+          },
+          "onFailure": {
+            "code": "Conformance.Inner",
+            "details": { "layer": "inner" }
+          },
+          "comment": "The inner translation: runs first on the ascent."
+        }
+      ],
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": {
+          "failure": {
+            "code": "Conformance.InjectedFailure",
+            "message": "injected"
+          }
+        }
+      },
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

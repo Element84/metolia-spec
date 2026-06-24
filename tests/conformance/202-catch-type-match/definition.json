@@ -1,0 +1,50 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 202: a types member selects on the failure's type, and a matcher's members are a conjunction.",
+  "entrypoint": "probe",
+  "steps": {
+    "probe": {
+      "action": "Call",
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": {
+          "failure": {
+            "type": "timeout",
+            "code": "Conformance.InjectedFailure",
+            "message": "injected"
+          }
+        }
+      },
+      "next": "done",
+      "catch": [
+        {
+          "match": {
+            "codes": [
+              "Conformance.*"
+            ],
+            "types": [
+              "error"
+            ]
+          },
+          "output": "conjunction-violated",
+          "next": "recover"
+        },
+        {
+          "match": {
+            "types": [
+              "timeout"
+            ]
+          },
+          "output": "timeout-handled",
+          "next": "recover"
+        }
+      ]
+    },
+    "recover": {
+      "action": "Return"
+    },
+    "done": {
+      "action": "Return"
+    }
+  }
+}

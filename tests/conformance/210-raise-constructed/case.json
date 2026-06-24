@@ -1,0 +1,10 @@
+{
+  "description": "Raise constructs a failure envelope.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

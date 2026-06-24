@@ -1,0 +1,10 @@
+{
+  "description": "A new failure chains the active one as previous.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

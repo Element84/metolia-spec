@@ -1,0 +1,62 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 603: a Retry policy matching on the retryable signal consumes only failures asserting it.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "retryable": {
+        "type": [
+          "boolean",
+          "null"
+        ],
+        "default": null
+      },
+      "tries": {
+        "type": "string",
+        "default": ""
+      }
+    }
+  },
+  "entrypoint": "flaky",
+  "steps": {
+    "flaky": {
+      "action": "Call",
+      "middleware": [
+        {
+          "provider": "mwl:provider.middleware/mwl/retry/v1",
+          "onEntry": {
+            "with": {
+              "policies": [
+                {
+                  "match": {
+                    "codes": [
+                      "Conformance.*"
+                    ],
+                    "retryable": true
+                  },
+                  "attempts": 3
+                }
+              ]
+            }
+          },
+          "onFailure": {
+            "assign": {
+              "tries": "{{ vars.tries + 'x' }}"
+            }
+          }
+        }
+      ],
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": {
+          "value": "recovered",
+          "failure": "{{ size(vars.tries) < 2 ? {'code': 'Conformance.InjectedFailure', 'message': 'injected', 'retryable': vars.retryable} : null }}"
+        }
+      },
+      "next": "done"
+    },
+    "done": {
+      "action": "Return"
+    }
+  }
+}

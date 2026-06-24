@@ -1,0 +1,13 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 021: a past instant completes the pause immediately.",
+  "entrypoint": "pause",
+  "steps": {
+    "pause": {
+      "action": "Sleep",
+      "until": "2020-01-01T00:00:00Z",
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

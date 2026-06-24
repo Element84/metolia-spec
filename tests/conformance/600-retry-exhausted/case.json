@@ -1,0 +1,10 @@
+{
+  "description": "Retry budget exhaustion: Provider.Middleware.Retry.Exhausted.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

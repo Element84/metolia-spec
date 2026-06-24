@@ -1,0 +1,26 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 102: onSuccess shapes the carried value and captures provider.metadata.",
+  "entrypoint": "fetch",
+  "steps": {
+    "fetch": {
+      "action": "Call",
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": {
+          "value": "v",
+          "metadata": { "requestId": "r-1" }
+        },
+        "onSuccess": {
+          "value": "{{ call.result.value + '!' }}",
+          "assign": { "rid": "{{ provider.metadata.requestId }}" }
+        }
+      },
+      "next": "done"
+    },
+    "done": {
+      "action": "Return",
+      "value": "{{ {'value': step.input, 'requestId': vars.rid} }}"
+    }
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "$schema": "https://mwl.dev/v0.1/provider/schema.json",
+  "uri": "mwl:provider.call/mwl/mock/v1",
+  "codePrefix": "Mock",
+  "description": "A configurable stand-in call provider. Produces a Result from its arguments alone, deterministically: a success carrying a chosen value (default: the dispatch's input) or a configured failure, after an optional delay, with optional window metadata.",
+  "parameters": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "value": {
+        "description": "The value of the success Result produced. Defaults to the dispatch's input. Unread when a non-null failure is supplied."
+      },
+      "failure": {
+        "description": "A failure Result to produce instead of a success. Takes precedence over value when non-null; null is equivalent to absent: the success path.",
+        "type": ["object", "null"],
+        "additionalProperties": false,
+        "required": ["code"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "not": { "const": "success" },
+            "default": "error",
+            "description": "The failure Result's type. MUST be a non-success type."
+          },
+          "code": {
+            "type": "string",
+            "description": "The failure code, the author's to choose; emulation is this provider's documented purpose."
+          },
+          "message": {
+            "type": "string",
+            "description": "A human-readable description."
+          },
+          "details": {
+            "description": "Arbitrary structured context."
+          },
+          "retryable": {
+            "type": ["boolean", "null"],
+            "description": "An advisory retry signal."
+          },
+          "previous": {
+            "type": ["object", "null"],
+            "description": "A chained prior failure. Defaults to absent; the mock emits the envelope exactly as configured."
+          }
+        }
+      },
+      "delay": {
+        "type": "string",
+        "format": "duration",
+        "description": "An ISO 8601 duration to wait before resolving."
+      },
+      "metadata": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Exposed verbatim as the window's provider.metadata."
+      }
+    }
+  },
+  "metadata": {
+    "type": "object",
+    "additionalProperties": true,
+    "description": "The mock's window carries whatever its metadata parameter supplied: the author's to configure."
+  },
+  "failureCatalog": {
+    "closed": [],
+    "open": ["*"]
+  }
+}

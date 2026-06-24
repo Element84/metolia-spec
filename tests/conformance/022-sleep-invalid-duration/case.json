@@ -1,0 +1,10 @@
+{
+  "description": "An invalid duration literal: System.ParameterValidationFailed.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

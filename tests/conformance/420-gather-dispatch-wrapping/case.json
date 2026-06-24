@@ -1,0 +1,11 @@
+{
+  "description": "Per-dispatch wrapping via an inline flow target; until counts the frame's Result.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core",
+    "https://mwl.dev/v0.1/conformance/expressions/cel"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

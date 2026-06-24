@@ -1,0 +1,27 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 640: author shaping on the descent and the ascent of one entry.",
+  "entrypoint": "thread",
+  "steps": {
+    "thread": {
+      "action": "Call",
+      "middleware": [
+        {
+          "provider": "mwl:provider.middleware/mwl/timeout/v1",
+          "onEntry": {
+            "with": { "duration": "PT1H" },
+            "output": "{{ middleware.input + '>' }}"
+          },
+          "onSuccess": {
+            "value": "{{ middleware.result.value + '<' }}"
+          }
+        }
+      ],
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1"
+      },
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

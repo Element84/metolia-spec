@@ -1,0 +1,34 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 501: one parameter supplied, one defaulted.",
+  "flows": {
+    "Combine": {
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "first": { "type": "string", "default": "A" },
+          "second": { "type": "string", "default": "B" }
+        }
+      },
+      "entrypoint": "emit",
+      "steps": {
+        "emit": {
+          "action": "Return",
+          "value": "{{ vars.first + vars.second }}"
+        }
+      }
+    }
+  },
+  "entrypoint": "run",
+  "steps": {
+    "run": {
+      "action": "Call",
+      "call": {
+        "flow": "Combine",
+        "with": { "first": "override" }
+      },
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

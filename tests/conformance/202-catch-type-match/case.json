@@ -1,0 +1,10 @@
+{
+  "description": "Failure-matcher type matching and member conjunction.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}

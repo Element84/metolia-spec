@@ -1,0 +1,37 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 230: handler expressions read the live failure context.",
+  "entrypoint": "fail",
+  "steps": {
+    "fail": {
+      "action": "Call",
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": {
+          "failure": {
+            "code": "Conformance.InjectedFailure",
+            "message": "injected"
+          }
+        }
+      },
+      "next": "done",
+      "catch": [
+        {
+          "match": {
+            "codes": [
+              "*"
+            ]
+          },
+          "next": "report"
+        }
+      ]
+    },
+    "report": {
+      "action": "Return",
+      "value": "{{ {'code': failure.code, 'message': failure.message} }}"
+    },
+    "done": {
+      "action": "Return"
+    }
+  }
+}

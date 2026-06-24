@@ -1,0 +1,17 @@
+{
+  "type": "error",
+  "code": "System.GatherCompletionUnmet",
+  "details": {
+    "failures": [
+      {
+        "index": 1,
+        "result": {
+          "type": "error",
+          "code": "Conformance.InjectedFailure",
+          "message": "injected"
+        }
+      }
+    ],
+    "failureCount": 1
+  }
+}

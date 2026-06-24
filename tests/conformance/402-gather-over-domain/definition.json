@@ -1,0 +1,18 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 402: the over result's domain; only an array dispatches.",
+  "entrypoint": "fan-out",
+  "steps": {
+    "fan-out": {
+      "action": "Gather",
+      "over": "{{ step.input.items }}",
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1"
+      },
+      "next": "done"
+    },
+    "done": {
+      "action": "Return"
+    }
+  }
+}

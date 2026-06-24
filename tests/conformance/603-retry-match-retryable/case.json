@@ -1,0 +1,16 @@
+{
+  "description": "A Retry policy matcher selecting on the retryable signal.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core",
+    "https://mwl.dev/v0.1/conformance/expressions/cel"
+  ],
+  "marks": [],
+  "scenarios": {
+    "asserted-retryable": {
+      "description": "Failures asserting retryable: true are consumed; eventual success."
+    },
+    "unset-signal": {
+      "description": "An unset signal matches no policy; the first failure passes through."
+    }
+  }
+}

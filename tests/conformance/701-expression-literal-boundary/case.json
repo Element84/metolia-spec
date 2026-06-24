@@ -1,0 +1,10 @@
+{
+  "description": "A delimiter pair not spanning the string stays literal.",
+  "profiles": [
+    "https://mwl.dev/v0.1/conformance/core"
+  ],
+  "marks": [],
+  "scenarios": {
+    "base": {}
+  }
+}
