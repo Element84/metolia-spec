@@ -17,8 +17,8 @@ invokes.
 
 <!-- dprint-ignore-start -->
 {{< cards cols="1" >}}
-  {{< card link="/guide/" title="Guide" subtitle="Learn MWL. Introduction, by-example tour, cookbook patterns, a worked end-to-end workflow, and the glossary." >}}
-  {{< card link="/reference/" title="Reference" subtitle="The normative specification. Data model, expressions, execution model, step actions, middleware, providers, conformance." >}}
-  {{< card link="/rationale/" title="Rationale" subtitle="The reasoning behind the design. Principles, non-goals, architecture, and the change log." >}}
+  {{< card link="guide" title="Guide" subtitle="Learn MWL. Introduction, by-example tour, cookbook patterns, a worked end-to-end workflow, and the glossary." >}}
+  {{< card link="reference" title="Reference" subtitle="The normative specification. Data model, expressions, execution model, step actions, middleware, providers, conformance." >}}
+  {{< card link="rationale" title="Rationale" subtitle="The reasoning behind the design. Principles, non-goals, architecture, and the change log." >}}
 {{< /cards >}}
 <!-- dprint-ignore-end -->
