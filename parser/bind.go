@@ -38,7 +38,7 @@ func (b *binder) pop()                { b.path = b.path[:len(b.path)-1] }
 
 func (b *binder) errorAt(code string, pos Position, format string, args ...any) {
 	b.diags = append(b.diags, Diagnostic{
-		Severity: SeverityError,
+		Severity: severityOf(code),
 		Code:     code,
 		Pos:      pos,
 		Path:     renderPath(b.path, ""),

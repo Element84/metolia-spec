@@ -160,7 +160,7 @@ func (d *decoder) position(offset int) Position {
 
 func (d *decoder) errorAt(code string, pos Position, path string, format string, args ...any) {
 	d.diags = append(d.diags, Diagnostic{
-		Severity: SeverityError,
+		Severity: severityOf(code),
 		Code:     code,
 		Pos:      pos,
 		Path:     path,

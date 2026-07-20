@@ -66,6 +66,41 @@ const (
 	CodeInvalidProviderURI = "invalid-provider-uri"
 )
 
+// Codes emitted by the check pass:
+const (
+	// CodeUnresolvedStep reports an entrypoint or next that names no Step
+	// in its own Flow's steps map.
+	CodeUnresolvedStep = "unresolved-step"
+	// CodeUnresolvedFlow reports a flow name that resolves to no flows
+	// entry on its lexical scope chain.
+	CodeUnresolvedFlow = "unresolved-flow"
+	// CodeFlowCycle reports a cycle in the flow-reference graph.
+	CodeFlowCycle = "flow-cycle"
+)
+
+// Warning codes. This is the complete set of warnings the parser emits; it
+// is deliberately limited to findings that arise as by-products of parsing
+// itself. The parser is not a complete linter (see the package
+// documentation).
+const (
+	// CodeShadowedFlow reports a flows entry that shadows a declaration
+	// of the same name in an enclosing Flow. Shadowing is legal; the
+	// nearest declaration wins at every call site within the inner Flow.
+	CodeShadowedFlow = "shadowed-flow"
+)
+
+// severityOf returns the severity a code always carries: severity is a
+// property of the code, not of the emission site. The warning cases are the
+// complete warning list; every other code is an error.
+func severityOf(code string) Severity {
+	switch code {
+	case CodeShadowedFlow:
+		return SeverityWarning
+	default:
+		return SeverityError
+	}
+}
+
 // Position is a location in the source. Line and Column are 1-based; Column
 // counts bytes within the line. Filename is the label supplied by
 // WithFilename and may be empty.
