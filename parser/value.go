@@ -46,8 +46,10 @@ type Value struct {
 	Array  []*Value // KindArray: elements in document order
 }
 
-// Member is one member of an object Value. NamePos locates the member's name;
-// Value.Pos locates its value.
+// Member is one name/value member of a JSON object. The decode tree uses it
+// for object members; the AST reuses it wherever a field is an ordered
+// name-to-value map (assign, a literal with object). NamePos locates the
+// member's name; Value.Pos locates its value.
 type Member struct {
 	Name    string
 	NamePos Position

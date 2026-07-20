@@ -38,7 +38,7 @@ func decode(src []byte, filename string) (*Value, Diagnostics) {
 			d.syntaxError(err)
 		} else {
 			pos := d.position(d.tokenStart(before))
-			d.errorAt("trailing-content", pos, "", "unexpected content after the root value")
+			d.errorAt(CodeTrailingContent, pos, "", "unexpected content after the root value")
 		}
 	}
 	return root, d.diags
@@ -104,7 +104,7 @@ func (d *decoder) object(pos Position) (*Value, error) {
 			seen = make(map[string]Position)
 		}
 		if first, dup := seen[name]; dup {
-			d.errorAt("duplicate-member", namePos, renderPath(d.path, name),
+			d.errorAt(CodeDuplicateMember, namePos, renderPath(d.path, name),
 				"duplicate object member %q; first defined at %s", name, first)
 			continue
 		}
@@ -175,16 +175,16 @@ func (d *decoder) syntaxError(err error) {
 	// The Decoder reports plain io.EOF both for an empty document and for
 	// input truncated between tokens; the source tells the two apart.
 	case errors.Is(err, io.EOF) && len(bytes.TrimSpace(d.src)) == 0:
-		d.errorAt("empty-document", d.position(0), "",
+		d.errorAt(CodeEmptyDocument, d.position(0), "",
 			"the document is empty")
 	case errors.Is(err, io.EOF), errors.Is(err, io.ErrUnexpectedEOF):
-		d.errorAt("json-syntax", d.position(len(d.src)), "",
+		d.errorAt(CodeJSONSyntax, d.position(len(d.src)), "",
 			"unexpected end of input")
 	case errors.As(err, &syn):
 		offset := min(int(syn.Offset), len(d.src))
-		d.errorAt("json-syntax", d.position(offset), "", "%s", syn.Error())
+		d.errorAt(CodeJSONSyntax, d.position(offset), "", "%s", syn.Error())
 	default:
-		d.errorAt("json-syntax", d.position(0), "", "%s", err.Error())
+		d.errorAt(CodeJSONSyntax, d.position(0), "", "%s", err.Error())
 	}
 }
 

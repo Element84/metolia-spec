@@ -26,6 +26,46 @@ func (s Severity) String() string {
 	}
 }
 
+// The error codes a Diagnostic.Code can carry, enumerated here in full. The
+// error set is exactly the specification's rejection set.
+//
+// Codes emitted by the decode pass:
+const (
+	// CodeJSONSyntax reports that the document is not valid JSON.
+	CodeJSONSyntax = "json-syntax"
+	// CodeEmptyDocument reports a document with no content.
+	CodeEmptyDocument = "empty-document"
+	// CodeDuplicateMember reports a member name repeated within one object.
+	CodeDuplicateMember = "duplicate-member"
+	// CodeTrailingContent reports content after the root value.
+	CodeTrailingContent = "trailing-content"
+)
+
+// Codes emitted by the bind pass:
+const (
+	// CodeWrongType reports a value of the wrong JSON kind for its field.
+	CodeWrongType = "wrong-type"
+	// CodeUnknownMember reports a member its containing shape does not
+	// accept.
+	CodeUnknownMember = "unknown-member"
+	// CodeMissingMember reports an absent required member.
+	CodeMissingMember = "missing-member"
+	// CodeInvalidValue reports a value of the right kind that is not a
+	// permitted value (an unknown action, an empty calls array, a
+	// concurrency below 1).
+	CodeInvalidValue = "invalid-value"
+	// CodeExclusiveMembers reports a violation of an exactly-one rule
+	// (a call's provider or flow, a Gather's two forms, a Sleep's for or
+	// until).
+	CodeExclusiveMembers = "exclusive-members"
+	// CodeExpressionNotPermitted reports an expression embedded in a
+	// structural field, which the specification requires rejecting.
+	CodeExpressionNotPermitted = "expression-not-permitted"
+	// CodeInvalidProviderURI reports a provider URI that is not a
+	// well-formed name of the kind its position requires.
+	CodeInvalidProviderURI = "invalid-provider-uri"
+)
+
 // Position is a location in the source. Line and Column are 1-based; Column
 // counts bytes within the line. Filename is the label supplied by
 // WithFilename and may be empty.
@@ -47,8 +87,7 @@ func (p Position) String() string {
 type Diagnostic struct {
 	Severity Severity
 	// Code is a stable, kebab-case identifier for the kind of finding,
-	// e.g. "duplicate-member". The set of warning codes the parser emits
-	// is small, closed, and documented.
+	// drawn from the Code constants above, which enumerate the full set.
 	Code string
 	Pos  Position
 	// Path locates the finding within the document as a dotted member
