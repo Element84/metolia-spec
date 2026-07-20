@@ -20,17 +20,16 @@ the reasoning from the code.
 4. [Provider-aware validation is a separate layer](#provider-aware-validation-is-a-separate-layer)
    — resolving URIs to definitions and validating `with` against them is an
    optional pass, possibly its own module later. _Future._
-5. [The published schemas are a test oracle](#the-published-schemas-are-a-test-oracle)
-   — the parser evaluates no JSON Schema at parse time; its test suite runs the
-   published schemas over the fixture corpus and fails on any verdict
-   disagreement.
-6. [The Step is a closed interface sum](#the-step-is-a-closed-interface-sum) —
+5. [The parser is three passes](#the-parser-is-three-passes) — decode builds the
+   positioned value tree, bind builds the typed AST and validates structure,
+   check enforces the cross-document rules; each pass collects diagnostics.
+6. [Decoding goes through a positioned value tree](#decoding-goes-through-a-positioned-value-tree)
+   — a token-level decode builds a generic JSON tree carrying self-contained
+   positions, document order, and duplicate-member rejection; template fields
+   keep their subtrees after binding.
+7. [The Step is a closed interface sum](#the-step-is-a-closed-interface-sum) —
    each action is its own struct carrying exactly the fields the spec gives it;
    `Step` is an interface closed by an unexported marker method.
-7. [Decoding goes through a positioned value tree](#decoding-goes-through-a-positioned-value-tree)
-   — a token-level decode builds a generic JSON tree carrying byte positions,
-   document order, and duplicate-key rejection; a bind pass produces the typed
-   AST from it.
 8. [Named collections keep document order](#named-collections-keep-document-order)
    — `steps` and `flows` are ordered lists with name indexes, so diagnostics are
    deterministic; value-and-order round-trip stays possible, byte fidelity is a
@@ -39,9 +38,10 @@ the reasoning from the code.
    — `Expr` stores body text and position, no CEL dependency; a generic
    literal-or-expression pair type; template fields hold pre-classified value
    trees.
-10. [The bind pass is the structural validator](#the-bind-pass-is-the-structural-validator)
-    — structural checks are hand-written in Go inside the bind pass; no JSON
-    Schema engine runs in the parse path.
+10. [Structural validation is hand-written, with the schemas as test oracle](#structural-validation-is-hand-written-with-the-schemas-as-test-oracle)
+    — the bind pass validates structure itself, with no JSON Schema engine in
+    the parse path; a differential test holds it to the published schemas over
+    the fixture corpus.
 11. [Diagnostics are collected, with severities](#diagnostics-are-collected-with-severities)
     — a parse reports everything it finds in one run; any error-severity
     diagnostic means a nil AST; the error set is exactly the spec's rejection
@@ -134,25 +134,46 @@ public commitment, so it waits for that pressure to appear.
 
 _Future; nothing built yet._
 
-## The published schemas are a test oracle
+## The parser is three passes
 
-The parser evaluates no JSON Schema at parse time (see
-[The bind pass is the structural validator](#the-bind-pass-is-the-structural-validator)),
-but it does not float free of the published schemas either. The test suite
-imports a JSON Schema engine as a test-only dependency and runs both the parser
-and the schemas in `static/v0.1/` over the fixture corpus
-(`tests/schemas/valid/`, `tests/schemas/invalid/`), failing when their
-accept/reject verdicts diverge. A test-only import appears in `parser/go.mod`,
-but module graph pruning keeps it out of consumers' builds.
+The parser runs three passes in order. Each answers one question, and each
+collects diagnostics as it goes:
 
-This differential test is the parser-side drift check. The repository already
-requires every normative spec change to land with schema and fixture updates, so
-a change that reaches the schema and fixtures but not the parser fails the
-parser's suite on the next run. Embedding the schema bytes with `go:embed` was
-considered and dropped: with no engine in the parse path, embedded bytes have
-nothing to check against at runtime, and behavioral agreement over the corpus is
-a stronger guarantee than byte identity of copies. The schemas are read from the
-repository tree as test inputs.
+| Pass   | Question it answers                                                                                                     | From → to                            |
+| ------ | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| decode | Is this legal input at the document level: valid JSON, no duplicate members, nothing after the root value?              | source bytes → positioned value tree |
+| bind   | Is each object the right shape: required fields present, types correct, no unrecognized fields, per-object constraints? | value tree → typed AST               |
+| check  | Do the pieces agree with each other: references resolve, flow names resolve, no cycles, every Step has an exit path?    | typed AST → diagnostics only         |
+
+A pass runs only when the one before it left something to run on: a syntax error
+leaves no tree, so bind never runs; bind errors leave no AST worth checking.
+Within a pass, one finding does not stop the pass itself — bind keeps binding
+the remaining Steps past a bad one (see
+[Diagnostics are collected, with severities](#diagnostics-are-collected-with-severities)).
+
+The division of knowledge follows the division of work: decode is generic JSON
+plus positions, MWL's grammar lives in bind, and the rules that span the
+document live in check.
+
+## Decoding goes through a positioned value tree
+
+The definition format requires an implementation to reject a document that
+repeats a member name within one object. `encoding/json` silently keeps the last
+duplicate, so plain unmarshalling cannot implement the spec, and the decode pass
+reads token by token regardless of any other choice. That fixed cost pays for
+the things that are painful to retrofit: source positions and document order.
+
+The tree the pass produces is small generic JSON: every node carries its
+position, every object records its members in document order, and duplicate
+names are rejected as they are read. A position is stored fully resolved
+(offset, line, and column, computed at node creation from a line index built
+once per source), so nodes are self-contained: a consumer holding one can render
+a location without carrying a translation table beside the tree. The bind pass
+carries each node's position onto the AST node it becomes, so a diagnostic can
+report `flow.json:42:10` beside the path (`steps.greet.next`). The tree is not
+discarded wholesale after binding: template fields (see
+[Expressions are recognized, not parsed](#expressions-are-recognized-not-parsed))
+hold their subtrees directly.
 
 ## The Step is a closed interface sum
 
@@ -170,30 +191,13 @@ no package outside the parser can add a variant. Consumers dispatch by type
 switch; Go does not check such switches for exhaustiveness, and a linter such as
 go-check-sumtype covers that gap. The variant structs mirror the schema's
 per-variant definitions (`stepCall`, `stepGather`, and so on) one to one, the
-same schema-to-parser correspondence the embedded-schema drift check guards.
+same schema-to-parser correspondence the differential test guards (see
+[Structural validation is hand-written, with the schemas as test oracle](#structural-validation-is-hand-written-with-the-schemas-as-test-oracle)).
 
 The interface treatment is reserved for the seven-way sum. The smaller either/or
 shapes (a call's provider-or-flow target, a `Gather`'s iterate-or-scatter form,
 a `Sleep`'s `for`-or-`until`) are structs with one pointer per arm and a
 bind-time invariant that exactly one arm is set.
-
-## Decoding goes through a positioned value tree
-
-The definition format requires an implementation to reject a document that
-repeats a member name within one object. `encoding/json` silently keeps the last
-duplicate, so plain unmarshalling cannot implement the spec, and decoding is
-token-level regardless of any other choice. That fixed cost pays for the things
-that are painful to retrofit: source positions and document order.
-
-Decoding is two passes. The decode pass builds a small generic JSON tree in
-which every node carries its kind and byte offset and every object records its
-members in document order, rejecting duplicate names as it reads. The bind pass
-walks that tree and produces the typed AST, carrying each node's position onto
-the AST node it becomes, so a diagnostic can report `flow.json:42:10` beside the
-path (`steps.greet.next`); line and column are derived from byte offsets on
-demand. The tree is not discarded wholesale after binding: template fields (see
-[Expressions are recognized, not parsed](#expressions-are-recognized-not-parsed))
-hold their subtrees directly.
 
 ## Named collections keep document order
 
@@ -234,30 +238,36 @@ Classification serves three field shapes:
   `with` object) holds its positioned value subtree, whose string leaves are
   pre-classified into literals and `Expr`s.
 
-## The bind pass is the structural validator
+## Structural validation is hand-written, with the schemas as test oracle
 
-The pipeline has three layers. The decode pass owns well-formedness: JSON syntax
-and the duplicate-member rule. The bind pass owns structural validation: that
-each object is the right shape, judged in isolation (required fields present,
-types correct, no unrecognized fields, per-object constraints like a `Gather`
-carrying exactly one form). A check pass owns the static semantic checks: the
-constraints that span the document, such as `entrypoint` and `next` resolution,
-flow-name scoping, cycle detection, and exit paths.
+The bind pass validates structure itself, in hand-written Go, rather than
+delegating to a JSON Schema engine evaluating the published schema. Three
+reasons, in order of weight. First, error quality is the parser's main product:
+the bind pass knows the `action` discriminator, so it can say "a `Call` Step
+requires `next`" with a file position, where a schema engine reports a failed
+seven-way `oneOf` against a decoded value, positionless. Second, the authority
+order: the prose governs and the schema may be in error, so a parser wired to
+the schema inherits schema bugs, while a hand-written parser encodes the prose
+and surfaces any disagreement as a failing fixture. Third, an engine would not
+reduce code: the bind pass must examine every field anyway to build the typed
+AST, so schema evaluation would be a second opinion carrying the module's first
+dependency, not a replacement for the bind logic.
 
-The structural layer is hand-written Go in the bind pass, not a JSON Schema
-engine evaluating the published schema. Three reasons, in order of weight.
-First, error quality is the parser's main product: the bind pass knows the
-`action` discriminator, so it can say "a `Call` Step requires `next`" with a
-file position, where a schema engine reports a failed seven-way `oneOf` against
-a decoded value, positionless. Second, the authority order: the prose governs
-and the schema may be in error, so a parser wired to the schema inherits schema
-bugs, while a hand-written parser encodes the prose and surfaces any
-disagreement as a failing fixture. Third, an engine would not reduce code: the
-bind pass must examine every field anyway to build the typed AST, so schema
-evaluation would be a second opinion carrying the module's first dependency, not
-a replacement for the bind logic. What keeps the hand-written layer honest is
-the differential test in
-[The published schemas are a test oracle](#the-published-schemas-are-a-test-oracle).
+What keeps the hand-written pass honest is a differential test. The test suite
+imports a JSON Schema engine as a test-only dependency and runs both the parser
+and the schemas in `static/v0.1/` over the fixture corpus
+(`tests/schemas/valid/`, `tests/schemas/invalid/`), failing when their
+accept/reject verdicts diverge. A test-only import appears in `parser/go.mod`,
+but module graph pruning keeps it out of consumers' builds.
+
+The differential test is also the parser-side drift check. The repository
+already requires every normative spec change to land with schema and fixture
+updates, so a change that reaches the schema and fixtures but not the parser
+fails the parser's suite on the next run. Embedding the schema bytes with
+`go:embed` was considered and dropped: with no engine in the parse path,
+embedded bytes have nothing to check against at runtime, and behavioral
+agreement over the corpus is a stronger guarantee than byte identity of copies.
+The schemas are read from the repository tree as test inputs.
 
 ## Diagnostics are collected, with severities
 
