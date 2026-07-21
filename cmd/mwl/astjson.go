@@ -1,11 +1,13 @@
-// The hand-designed JSON encoding of the parser's AST, per DESIGN.md ("The
-// AST encoding makes the parser's decisions visible"). Go's default
-// marshaling cannot express the AST -- Step is an interface, the pair types
-// would leak Go field names, and the action discriminator lives in the type
-// rather than a field -- so every shape is emitted explicitly. Key-order
-// rules: an object's own "pos" is its last member; "namePos" immediately
-// follows the "name" it locates; a one-key object's present key names the
-// arm the author took, and bare JSON null never carries meaning.
+// The JSON encoding of the parser's AST, per DESIGN.md ("The AST encoding
+// makes the parser's decisions visible"). The bulk of the encoding is
+// derived from the AST structs by reflection -- field names camelCased,
+// nil pointers and empty slices omitted (which collapses the
+// literal-or-expression pair types to their one-key form), unexported
+// fields invisible -- so a field added to the AST appears in the output
+// without touching this file. What remains hand-written is exactly the set
+// of semantic decisions the struct shapes cannot express: the action
+// discriminator, position rendering, value trees with classified string
+// leaves, the explicit-null pair types, and the "pos"-last key rule.
 package main
 
 import (
@@ -13,6 +15,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
 
 	"github.com/Element84/metolia-spec/parser"
 )
@@ -107,35 +110,163 @@ func encDiagnostic(d parser.Diagnostic) *obj {
 		set("pos", encPos(d.Pos))
 }
 
-func encName(n parser.Name) *obj {
-	return newObj().set("value", n.Value).set("pos", encPos(n.Pos))
+func encFlow(f *parser.Flow) *obj {
+	return walkStruct(reflect.ValueOf(f).Elem(), "", true)
 }
 
-func encStringLit(s parser.StringLit) *obj {
-	return newObj().set("value", s.Value).set("pos", encPos(s.Pos))
+// stepActions maps each Step variant to its action discriminator, which in
+// Go lives in the type and in the source lives in the "action" field. A
+// new variant that is not added here panics in walkValue, which the golden
+// tests catch.
+var stepActions = map[reflect.Type]string{
+	reflect.TypeOf(parser.CallStep{}):   "Call",
+	reflect.TypeOf(parser.GatherStep{}): "Gather",
+	reflect.TypeOf(parser.MatchStep{}):  "Match",
+	reflect.TypeOf(parser.PassStep{}):   "Pass",
+	reflect.TypeOf(parser.SleepStep{}):  "Sleep",
+	reflect.TypeOf(parser.ReturnStep{}): "Return",
+	reflect.TypeOf(parser.RaiseStep{}):  "Raise",
 }
 
-func encExpr(e parser.Expr) *obj {
-	return newObj().set("body", e.Body).set("pos", encPos(e.Pos))
+// keyOverrides holds the field names whose camelCased form is not the
+// source's key.
+var keyOverrides = map[string]string{
+	"URI":    "uri",
+	"Schema": "$schema",
 }
 
-// encOr encodes a literal-or-expression pair as a one-key object whose
-// present key is the verdict.
-func encOr[T any](o *parser.OrExpr[T], lit func(T) any) *obj {
-	if o.Expr != nil {
-		return newObj().set("expr", encExpr(*o.Expr))
+// fieldOrder overrides the struct declaration order where the output order
+// deliberately differs from it. Flow is the one case: the output leads
+// with "$schema" the way a document does.
+var fieldOrder = map[reflect.Type][]string{
+	reflect.TypeOf(parser.Flow{}): {
+		"Schema", "Comment", "Entrypoint", "Parameters",
+		"Middleware", "Flows", "Steps", "Pos",
+	},
+}
+
+// omitWhenEmptyString names the string fields where the empty string means
+// "absent" rather than an authored empty value.
+var omitWhenEmptyString = map[string]bool{
+	"Comment": true,
+	"Schema":  true,
+}
+
+var (
+	positionType  = reflect.TypeOf(parser.Position{})
+	valuePtrType  = reflect.TypeOf((*parser.Value)(nil))
+	stepIfaceType = reflect.TypeOf((*parser.Step)(nil)).Elem()
+)
+
+// walkStruct derives a struct's JSON object from its fields: skip
+// unexported fields, nil pointers, empty slices, and absent-meaning empty
+// strings; camelCase the key; recurse on the value. An action discriminator
+// leads when present, and "pos" always trails (DESIGN.md's key-order rule).
+// classify is carried down to string leaves in value trees; it turns off
+// under Parameters, the one Value field that is not a template.
+func walkStruct(v reflect.Value, action string, classify bool) *obj {
+	t := v.Type()
+	o := newObj()
+	if action != "" {
+		o.set("action", action)
 	}
-	return newObj().set("literal", lit(*o.Literal))
+
+	names := fieldOrder[t]
+	if names == nil {
+		for i := 0; i < t.NumField(); i++ {
+			names = append(names, t.Field(i).Name)
+		}
+	}
+
+	var pos any
+	for _, name := range names {
+		f, ok := t.FieldByName(name)
+		if !ok || !f.IsExported() {
+			continue
+		}
+		fv := v.FieldByIndex(f.Index)
+		switch {
+		case fv.Kind() == reflect.Pointer && fv.IsNil(),
+			fv.Kind() == reflect.Interface && fv.IsNil(),
+			fv.Kind() == reflect.Slice && fv.Len() == 0,
+			fv.Kind() == reflect.String && fv.String() == "" && omitWhenEmptyString[name]:
+			continue
+		}
+		if name == "Pos" && f.Type == positionType {
+			pos = encPos(fv.Interface().(parser.Position))
+			continue
+		}
+		key := keyOverrides[name]
+		if key == "" {
+			key = lowerFirst(name)
+		}
+		o.set(key, walkValue(fv, classify && name != "Parameters"))
+	}
+	if pos != nil {
+		o.set("pos", pos)
+	}
+	return o
 }
 
-func litString(s string) any { return s }
-func litBool(b bool) any     { return b }
-func litInt(n int64) any     { return n }
+// walkValue derives the JSON form of one value. The hand-written cases are
+// the semantic decisions: positions, value trees, the Step discriminator,
+// and the explicit-null pair types; everything else is generic.
+func walkValue(v reflect.Value, classify bool) any {
+	switch v.Type() {
+	case positionType:
+		return encPos(v.Interface().(parser.Position))
+	case valuePtrType:
+		return encValue(v.Interface().(*parser.Value), classify)
+	}
+
+	switch v.Kind() {
+	case reflect.Pointer:
+		return walkValue(v.Elem(), classify)
+	case reflect.Interface:
+		if v.Type() == stepIfaceType {
+			concrete := v.Elem().Elem() // Step -> *XStep -> XStep
+			action, ok := stepActions[concrete.Type()]
+			if !ok {
+				panic(fmt.Sprintf("unknown step type %s", concrete.Type()))
+			}
+			return walkStruct(concrete, action, classify)
+		}
+		return walkValue(v.Elem(), classify)
+	case reflect.Struct:
+		switch x := v.Interface().(type) {
+		case parser.RetryableField:
+			return encRetryable(&x)
+		case parser.PreviousField:
+			return encPrevious(&x)
+		case parser.ConcurrencyCap:
+			return encConcurrency(&x)
+		}
+		return walkStruct(v, "", classify)
+	case reflect.Slice:
+		out := make([]any, 0, v.Len())
+		for i := 0; i < v.Len(); i++ {
+			out = append(out, walkValue(v.Index(i), classify))
+		}
+		return out
+	case reflect.String:
+		return v.String()
+	case reflect.Bool:
+		return v.Bool()
+	case reflect.Int, reflect.Int64:
+		return v.Int()
+	default:
+		panic(fmt.Sprintf("unhandled kind %s for type %s", v.Kind(), v.Type()))
+	}
+}
+
+func lowerFirst(s string) string {
+	return string(s[0]|0x20) + s[1:]
+}
 
 func encRetryable(r *parser.RetryableField) *obj {
 	switch {
 	case r.Expr != nil:
-		return newObj().set("expr", encExpr(*r.Expr))
+		return newObj().set("expr", walkStruct(reflect.ValueOf(r.Expr).Elem(), "", true))
 	case r.Null:
 		return newObj().set("null", true)
 	default:
@@ -146,12 +277,24 @@ func encRetryable(r *parser.RetryableField) *obj {
 func encPrevious(p *parser.PreviousField) *obj {
 	switch {
 	case p.Expr != nil:
-		return newObj().set("expr", encExpr(*p.Expr))
+		return newObj().set("expr", walkStruct(reflect.ValueOf(p.Expr).Elem(), "", true))
 	case p.Null:
 		return newObj().set("null", true)
 	default:
 		return newObj().set("literal", encValue(p.Literal, true))
 	}
+}
+
+// encConcurrency keeps the written form: a cap value, or the explicit null
+// the author wrote (equivalent to absent, preserved as written).
+func encConcurrency(c *parser.ConcurrencyCap) *obj {
+	o := newObj()
+	if c.Value != nil {
+		o.set("value", *c.Value)
+	} else {
+		o.set("null", true)
+	}
+	return o.set("pos", encPos(c.Pos))
 }
 
 // encValue encodes a positioned value subtree. With classify set, string
@@ -176,7 +319,14 @@ func encValue(v *parser.Value, classify bool) *obj {
 			o.set("kind", "string").set("value", v.Str)
 		}
 	case parser.KindObject:
-		o.set("kind", "object").set("members", encMembers(v.Object, classify))
+		members := make([]any, 0, len(v.Object))
+		for _, m := range v.Object {
+			members = append(members, newObj().
+				set("name", m.Name).
+				set("namePos", encPos(m.NamePos)).
+				set("value", encValue(m.Value, classify)))
+		}
+		o.set("kind", "object").set("members", members)
 	case parser.KindArray:
 		elems := make([]any, 0, len(v.Array))
 		for _, e := range v.Array {
@@ -187,371 +337,4 @@ func encValue(v *parser.Value, classify bool) *obj {
 		panic(fmt.Sprintf("unknown value kind %v", v.Kind))
 	}
 	return o.set("pos", encPos(v.Pos))
-}
-
-func encMembers(ms []parser.Member, classify bool) []any {
-	out := make([]any, 0, len(ms))
-	for _, m := range ms {
-		out = append(out, newObj().
-			set("name", m.Name).
-			set("namePos", encPos(m.NamePos)).
-			set("value", encValue(m.Value, classify)))
-	}
-	return out
-}
-
-func encFlow(f *parser.Flow) *obj {
-	o := newObj()
-	if f.Schema != "" {
-		o.set("$schema", f.Schema)
-	}
-	if f.Comment != "" {
-		o.set("comment", f.Comment)
-	}
-	o.set("entrypoint", encName(f.Entrypoint))
-	if f.Parameters != nil {
-		o.set("parameters", encValue(f.Parameters, false))
-	}
-	if len(f.Middleware) > 0 {
-		o.set("middleware", encMiddlewareList(f.Middleware))
-	}
-	if len(f.Flows) > 0 {
-		flows := make([]any, 0, len(f.Flows))
-		for _, nf := range f.Flows {
-			flows = append(flows, newObj().
-				set("name", nf.Name).
-				set("namePos", encPos(nf.NamePos)).
-				set("flow", encFlow(nf.Flow)))
-		}
-		o.set("flows", flows)
-	}
-	steps := make([]any, 0, len(f.Steps))
-	for _, ns := range f.Steps {
-		steps = append(steps, newObj().
-			set("name", ns.Name).
-			set("namePos", encPos(ns.NamePos)).
-			set("step", encStep(ns.Step)))
-	}
-	o.set("steps", steps)
-	return o.set("pos", encPos(f.Pos))
-}
-
-func encStep(s parser.Step) *obj {
-	switch s := s.(type) {
-	case *parser.CallStep:
-		o := newObj().set("action", "Call")
-		setComment(o, s.Comment)
-		o.set("call", encCall(s.Call))
-		setValue(o, "input", s.Input)
-		setValue(o, "output", s.Output)
-		setAssign(o, s.Assign)
-		if len(s.Middleware) > 0 {
-			o.set("middleware", encMiddlewareList(s.Middleware))
-		}
-		setCatch(o, s.Catch)
-		o.set("next", encName(s.Next))
-		return o.set("pos", encPos(s.Pos))
-	case *parser.GatherStep:
-		o := newObj().set("action", "Gather")
-		setComment(o, s.Comment)
-		if s.Over != nil {
-			o.set("over", encOr(s.Over, func(vs []*parser.Value) any {
-				elems := make([]any, 0, len(vs))
-				for _, v := range vs {
-					elems = append(elems, encValue(v, true))
-				}
-				return elems
-			}))
-		}
-		if s.Call != nil {
-			o.set("call", encCall(s.Call))
-		}
-		if len(s.Calls) > 0 {
-			calls := make([]any, 0, len(s.Calls))
-			for _, c := range s.Calls {
-				calls = append(calls, encCall(c))
-			}
-			o.set("calls", calls)
-		}
-		if s.Completion != nil {
-			o.set("completion", encCompletion(s.Completion))
-		}
-		if s.Concurrency != nil {
-			o.set("concurrency", encConcurrency(s.Concurrency))
-		}
-		setValue(o, "output", s.Output)
-		setAssign(o, s.Assign)
-		setCatch(o, s.Catch)
-		o.set("next", encName(s.Next))
-		return o.set("pos", encPos(s.Pos))
-	case *parser.MatchStep:
-		o := newObj().set("action", "Match")
-		setComment(o, s.Comment)
-		setValue(o, "input", s.Input)
-		cases := make([]any, 0, len(s.Cases))
-		for _, c := range s.Cases {
-			cases = append(cases, encMatchCase(c))
-		}
-		o.set("cases", cases)
-		o.set("default", encMatchDefault(s.Default))
-		return o.set("pos", encPos(s.Pos))
-	case *parser.PassStep:
-		o := newObj().set("action", "Pass")
-		setComment(o, s.Comment)
-		setValue(o, "output", s.Output)
-		setAssign(o, s.Assign)
-		o.set("next", encName(s.Next))
-		return o.set("pos", encPos(s.Pos))
-	case *parser.SleepStep:
-		o := newObj().set("action", "Sleep")
-		setComment(o, s.Comment)
-		if s.For != nil {
-			o.set("for", encOr(s.For, litString))
-		}
-		if s.Until != nil {
-			o.set("until", encOr(s.Until, litString))
-		}
-		o.set("next", encName(s.Next))
-		return o.set("pos", encPos(s.Pos))
-	case *parser.ReturnStep:
-		o := newObj().set("action", "Return")
-		setComment(o, s.Comment)
-		setValue(o, "value", s.Value)
-		return o.set("pos", encPos(s.Pos))
-	case *parser.RaiseStep:
-		o := newObj().set("action", "Raise")
-		setComment(o, s.Comment)
-		if s.Result != nil {
-			o.set("result", encRaiseResult(s.Result))
-		}
-		return o.set("pos", encPos(s.Pos))
-	default:
-		panic(fmt.Sprintf("unknown step type %T", s))
-	}
-}
-
-func setComment(o *obj, comment string) {
-	if comment != "" {
-		o.set("comment", comment)
-	}
-}
-
-func setValue(o *obj, key string, v *parser.Value) {
-	if v != nil {
-		o.set(key, encValue(v, true))
-	}
-}
-
-func setAssign(o *obj, ms []parser.Member) {
-	if len(ms) > 0 {
-		o.set("assign", encMembers(ms, true))
-	}
-}
-
-func setCatch(o *obj, cs []parser.CatchClause) {
-	if len(cs) == 0 {
-		return
-	}
-	out := make([]any, 0, len(cs))
-	for _, c := range cs {
-		out = append(out, encCatchClause(c))
-	}
-	o.set("catch", out)
-}
-
-func encCall(c *parser.Call) *obj {
-	o := newObj()
-	setComment(o, c.Comment)
-	if c.Provider != nil {
-		o.set("provider", encProviderRef(*c.Provider))
-	}
-	if c.Flow != nil {
-		o.set("flow", encFlowTarget(c.Flow))
-	}
-	setValue(o, "input", c.Input)
-	if c.With != nil {
-		o.set("with", encOr(c.With, func(ms []parser.Member) any {
-			return encMembers(ms, true)
-		}))
-	}
-	if c.OnSuccess != nil {
-		s := newObj()
-		setValue(s, "value", c.OnSuccess.Value)
-		setAssign(s, c.OnSuccess.Assign)
-		o.set("onSuccess", s.set("pos", encPos(c.OnSuccess.Pos)))
-	}
-	if c.OnFailure != nil {
-		f := newObj()
-		setAssign(f, c.OnFailure.Assign)
-		o.set("onFailure", f.set("pos", encPos(c.OnFailure.Pos)))
-	}
-	return o.set("pos", encPos(c.Pos))
-}
-
-func encProviderRef(p parser.ProviderRef) *obj {
-	return newObj().set("uri", p.URI).set("pos", encPos(p.Pos))
-}
-
-// encFlowTarget encodes a call's flow target as a one-key object: "name"
-// for a named subflow reference, "inline" for a Flow written in place.
-func encFlowTarget(t *parser.FlowTarget) *obj {
-	if t.Name != nil {
-		return newObj().set("name", encName(*t.Name))
-	}
-	return newObj().set("inline", encFlow(t.Inline))
-}
-
-func encCatchClause(c parser.CatchClause) *obj {
-	o := newObj()
-	setComment(o, c.Comment)
-	o.set("match", encMatcher(c.Match))
-	setValue(o, "output", c.Output)
-	setAssign(o, c.Assign)
-	o.set("next", encName(c.Next))
-	return o.set("pos", encPos(c.Pos))
-}
-
-func encMatcher(m parser.FailureMatcher) *obj {
-	o := newObj()
-	if len(m.Codes) > 0 {
-		o.set("codes", encStringLits(m.Codes))
-	}
-	if len(m.Types) > 0 {
-		o.set("types", encStringLits(m.Types))
-	}
-	if m.Retryable != nil {
-		o.set("retryable", *m.Retryable)
-	}
-	return o.set("pos", encPos(m.Pos))
-}
-
-func encStringLits(ss []parser.StringLit) []any {
-	out := make([]any, 0, len(ss))
-	for _, s := range ss {
-		out = append(out, encStringLit(s))
-	}
-	return out
-}
-
-func encMatchCase(c parser.MatchCase) *obj {
-	o := newObj()
-	setComment(o, c.Comment)
-	o.set("when", encExpr(c.When))
-	setValue(o, "output", c.Output)
-	setAssign(o, c.Assign)
-	o.set("next", encName(c.Next))
-	return o.set("pos", encPos(c.Pos))
-}
-
-func encMatchDefault(d parser.MatchDefault) *obj {
-	o := newObj()
-	setComment(o, d.Comment)
-	setValue(o, "output", d.Output)
-	setAssign(o, d.Assign)
-	o.set("next", encName(d.Next))
-	return o.set("pos", encPos(d.Pos))
-}
-
-func encCompletion(c *parser.Completion) *obj {
-	o := newObj().set("successes", encOr(&c.Successes, litInt))
-	if c.Wait != nil {
-		o.set("wait", *c.Wait)
-	}
-	return o.set("pos", encPos(c.Pos))
-}
-
-// encConcurrency keeps the written form: a cap value, or the explicit null
-// the author wrote (equivalent to absent, preserved as written).
-func encConcurrency(c *parser.ConcurrencyCap) *obj {
-	o := newObj()
-	if c.Value != nil {
-		o.set("value", *c.Value)
-	} else {
-		o.set("null", true)
-	}
-	return o.set("pos", encPos(c.Pos))
-}
-
-func encRaiseResult(r *parser.RaiseResult) *obj {
-	o := newObj()
-	if r.Type != nil {
-		o.set("type", encOr(r.Type, litString))
-	}
-	o.set("code", encOr(&r.Code, litString))
-	if r.Message != nil {
-		o.set("message", encOr(r.Message, litString))
-	}
-	setValue(o, "details", r.Details)
-	if r.Retryable != nil {
-		o.set("retryable", encRetryable(r.Retryable))
-	}
-	if r.Previous != nil {
-		o.set("previous", encPrevious(r.Previous))
-	}
-	return o.set("pos", encPos(r.Pos))
-}
-
-func encMiddlewareList(ms []parser.MiddlewareEntry) []any {
-	out := make([]any, 0, len(ms))
-	for _, m := range ms {
-		out = append(out, encMiddlewareEntry(m))
-	}
-	return out
-}
-
-func encMiddlewareEntry(m parser.MiddlewareEntry) *obj {
-	o := newObj()
-	setComment(o, m.Comment)
-	o.set("provider", encProviderRef(m.Provider))
-	if m.OnEntry != nil {
-		p := newObj()
-		setPhaseCommon(p, m.OnEntry.When, m.OnEntry.With, m.OnEntry.Assign)
-		setValue(p, "output", m.OnEntry.Output)
-		o.set("onEntry", p.set("pos", encPos(m.OnEntry.Pos)))
-	}
-	if m.OnSuccess != nil {
-		p := newObj()
-		setPhaseCommon(p, m.OnSuccess.When, m.OnSuccess.With, m.OnSuccess.Assign)
-		setValue(p, "value", m.OnSuccess.Value)
-		o.set("onSuccess", p.set("pos", encPos(m.OnSuccess.Pos)))
-	}
-	if m.OnFailure != nil {
-		p := newObj()
-		setPhaseCommon(p, m.OnFailure.When, m.OnFailure.With, m.OnFailure.Assign)
-		if m.OnFailure.Type != nil {
-			p.set("type", encOr(m.OnFailure.Type, litString))
-		}
-		if m.OnFailure.Code != nil {
-			p.set("code", encOr(m.OnFailure.Code, litString))
-		}
-		if m.OnFailure.Message != nil {
-			p.set("message", encOr(m.OnFailure.Message, litString))
-		}
-		setValue(p, "details", m.OnFailure.Details)
-		if m.OnFailure.Retryable != nil {
-			p.set("retryable", encRetryable(m.OnFailure.Retryable))
-		}
-		if m.OnFailure.Previous != nil {
-			p.set("previous", encPrevious(m.OnFailure.Previous))
-		}
-		o.set("onFailure", p.set("pos", encPos(m.OnFailure.Pos)))
-	}
-	if m.OnAlways != nil {
-		p := newObj()
-		setPhaseCommon(p, m.OnAlways.When, m.OnAlways.With, m.OnAlways.Assign)
-		o.set("onAlways", p.set("pos", encPos(m.OnAlways.Pos)))
-	}
-	return o.set("pos", encPos(m.Pos))
-}
-
-func setPhaseCommon(o *obj, when *parser.OrExpr[bool], with *parser.OrExpr[[]parser.Member], assign []parser.Member) {
-	if when != nil {
-		o.set("when", encOr(when, litBool))
-	}
-	if with != nil {
-		o.set("with", encOr(with, func(ms []parser.Member) any {
-			return encMembers(ms, true)
-		}))
-	}
-	setAssign(o, assign)
 }
