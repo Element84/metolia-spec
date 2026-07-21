@@ -38,19 +38,23 @@ the reasoning from the code.
    — `Expr` stores body text and position, no CEL dependency; a generic
    literal-or-expression pair type; template fields hold pre-classified value
    trees.
-10. [Structural validation is hand-written, with the schemas as test oracle](#structural-validation-is-hand-written-with-the-schemas-as-test-oracle)
+10. [The typed model goes as deep as the spec's opinions](#the-typed-model-goes-as-deep-as-the-specs-opinions)
+    — every construct the spec constrains binds to a typed node; where the
+    spec's opinions stop (a flow's template fields, a provider's embedded
+    schemas), the parser retains a positioned value tree instead.
+11. [Structural validation is hand-written, with the schemas as test oracle](#structural-validation-is-hand-written-with-the-schemas-as-test-oracle)
     — the bind pass validates structure itself, with no JSON Schema engine in
     the parse path; a differential test holds it to the published schemas over
     the fixture corpus.
-11. [Diagnostics are collected, with severities](#diagnostics-are-collected-with-severities)
+12. [Diagnostics are collected, with severities](#diagnostics-are-collected-with-severities)
     — a parse reports everything it finds in one run; any error-severity
     diagnostic means a nil AST; the error set is exactly the spec's rejection
     set.
-12. [The parser warns only as a by-product](#the-parser-warns-only-as-a-by-product)
+13. [The parser warns only as a by-product](#the-parser-warns-only-as-a-by-product)
     — warnings are limited to findings the parse already computes, drawn from a
     short, closed, documented list of codes; a complete linter is a separate
     layer.
-13. [The API takes bytes, not files](#the-api-takes-bytes-not-files) —
+14. [The API takes bytes, not files](#the-api-takes-bytes-not-files) —
     `ParseFlow` and `ParseProvider` in package `parser` take source bytes and do
     no file I/O; a filename is an optional diagnostic label supplied by
     functional option.
@@ -237,6 +241,28 @@ Classification serves three field shapes:
 - A template field (`input`, `output`, `value`, an `assign` entry's value, a
   `with` object) holds its positioned value subtree, whose string leaves are
   pre-classified into literals and `Expr`s.
+
+## The typed model goes as deep as the spec's opinions
+
+Bind produces a typed node for every construct the specification constrains, and
+stops typing exactly where the specification stops having opinions: what remains
+is retained as a positioned value tree, held but not interpreted. In a Flow the
+boundary falls at the template fields (`input`, `output`, `value`, a `with`
+object, an `assign` entry's value), whose interiors are the author's arbitrary
+JSON; the specification keeps one opinion inside them, that a string leaf is a
+literal or an expression, and that one opinion is applied to the retained tree
+as leaf classification. In a provider definition the boundary falls at the
+embedded parameter and metadata schemas, whose interiors are JSON Schema; no
+opinion applies inside them, so their string leaves stay plain strings,
+providers having no expression fields.
+
+The rule guards against a typed model of a foreign grammar that goes partway.
+Modeling the inside of an embedded schema (its `properties`, its `required`)
+would look authoritative while silently mangling whatever it does not model
+(`$ref`, composition, conditionals); modeling all of it means implementing JSON
+Schema, the dependency the parse path deliberately excludes. The same holds for
+expression bodies and CEL. Where another language begins, the parser records
+position and content and leaves interpretation to that language's own tooling.
 
 ## Structural validation is hand-written, with the schemas as test oracle
 
