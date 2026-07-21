@@ -143,6 +143,18 @@ consumers script against it accordingly. See
 [Golden files document the shape](#golden-files-document-the-shape) for how
 changes stay visible.
 
+The envelope is a **machine artifact**. Its audience is tooling, so its shapes
+mirror the parser's AST types faithfully and make no attempt to resemble the
+source document or to read well for a human. This is a deliberate boundary, not
+an omission: readability accommodations (position stripping, extra uniformity
+tags beyond what the AST types carry) were tried and removed, because each one
+made the output a half-measure between the internal view and the source view, at
+home in neither. Where the grammar forced a construct (a Match case's `when`
+admits only an expression), the encoding carries no discriminator—there was no
+decision to record. The human-facing rendering of "what the parser understood"
+is MWL re-emission (see [Deferred features](#deferred-features)): a document in
+the language the author wrote, comparable to the source directly.
+
 ## The AST encoding makes the parser's decisions visible
 
 Go's default marshaling cannot express the AST—`Step` is an interface, the pair
@@ -272,8 +284,10 @@ rival the flow schema) is premature for a shape marked unstable:
   surface. It returns if actual usage keeps asking for it.
 - **MWL re-emission**: serializing the AST back to a definition document—the
   true round trip, and the seed of a formatter. Kept out of `parse`; byte
-  fidelity is a non-goal the parser's design already declares, so this arrives,
-  if ever, as its own command with its own contract.
+  fidelity is a non-goal the parser's design already declares, so this arrives
+  as its own command with its own contract. First in line among the deferrals:
+  it is the human-facing rendering of a parse result, the counterpart to the
+  machine-only envelope.
 - **Diagnostics-only JSON**: a flag emitting just the diagnostics array.
   `--ast | jq .diagnostics` covers the need today; the flag is cheap to add if a
   consumer objects to paying for the AST.
