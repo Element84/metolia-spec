@@ -267,6 +267,14 @@ provider emits, under its prefix, only the codes its catalog declares plus codes
 within its open sub-prefixes. Nothing partitions code values at runtime (see
 [Code namespaces](../call-interface/#code-namespaces)).
 
+The taxonomy also reaches the catalog's own entries: a provider's closed codes
+and open sub-prefixes sit under its own kind and `codePrefix` segments, the lone
+`*` aside. An entry outside that slice does not invalidate the document, because
+the catalog constrains the provider's emissions rather than the document's text,
+but it is rarely what the author meant: validators MAY warn where a closed code
+or an open sub-prefix other than the lone `*` disagrees with the provider's URI
+kind or its `codePrefix`, but MUST NOT reject the definition.
+
 A catalog SHOULD carry a human-readable description for each closed code and
 each open sub-prefix; the specification does not fix where or in what format
 those descriptions live.
