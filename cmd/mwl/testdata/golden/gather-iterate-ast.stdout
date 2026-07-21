@@ -1,0 +1,179 @@
+{
+  "filename": "testdata/gather-iterate.json",
+  "ast": {
+    "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+    "comment": "Golden fixture: the iterate Gather form with completion, concurrency, and catch.",
+    "entrypoint": {
+      "value": "notify-all",
+      "pos": {
+        "line": 4,
+        "col": 17,
+        "offset": 169
+      }
+    },
+    "steps": [
+      {
+        "name": "notify-all",
+        "namePos": {
+          "line": 6,
+          "col": 5,
+          "offset": 200
+        },
+        "step": {
+          "action": "Gather",
+          "over": {
+            "expr": {
+              "body": "vars.recipients",
+              "pos": {
+                "line": 8,
+                "col": 15,
+                "offset": 256
+              }
+            }
+          },
+          "call": {
+            "provider": {
+              "uri": "mwl:provider.call/mwl/mock/v1",
+              "pos": {
+                "line": 10,
+                "col": 21,
+                "offset": 317
+              }
+            },
+            "with": {
+              "literal": [
+                {
+                  "name": "to",
+                  "namePos": {
+                    "line": 11,
+                    "col": 19,
+                    "offset": 368
+                  },
+                  "value": {
+                    "kind": "expr",
+                    "body": "call.item",
+                    "pos": {
+                      "line": 11,
+                      "col": 25,
+                      "offset": 374
+                    }
+                  }
+                },
+                {
+                  "name": "subject",
+                  "namePos": {
+                    "line": 11,
+                    "col": 44,
+                    "offset": 393
+                  },
+                  "value": {
+                    "kind": "string",
+                    "value": "hello",
+                    "pos": {
+                      "line": 11,
+                      "col": 55,
+                      "offset": 404
+                    }
+                  }
+                }
+              ]
+            },
+            "pos": {
+              "line": 9,
+              "col": 15,
+              "offset": 295
+            }
+          },
+          "completion": {
+            "successes": {
+              "literal": 1
+            },
+            "wait": false,
+            "pos": {
+              "line": 13,
+              "col": 21,
+              "offset": 443
+            }
+          },
+          "concurrency": {
+            "value": 2,
+            "pos": {
+              "line": 14,
+              "col": 22,
+              "offset": 499
+            }
+          },
+          "catch": [
+            {
+              "match": {
+                "codes": [
+                  {
+                    "value": "*",
+                    "pos": {
+                      "line": 16,
+                      "col": 32,
+                      "offset": 550
+                    }
+                  }
+                ],
+                "pos": {
+                  "line": 16,
+                  "col": 20,
+                  "offset": 538
+                }
+              },
+              "next": {
+                "value": "done",
+                "pos": {
+                  "line": 16,
+                  "col": 48,
+                  "offset": 566
+                }
+              },
+              "pos": {
+                "line": 16,
+                "col": 9,
+                "offset": 527
+              }
+            }
+          ],
+          "next": {
+            "value": "done",
+            "pos": {
+              "line": 18,
+              "col": 15,
+              "offset": 598
+            }
+          },
+          "pos": {
+            "line": 6,
+            "col": 19,
+            "offset": 214
+          }
+        }
+      },
+      {
+        "name": "done",
+        "namePos": {
+          "line": 20,
+          "col": 5,
+          "offset": 616
+        },
+        "step": {
+          "action": "Return",
+          "pos": {
+            "line": 20,
+            "col": 13,
+            "offset": 624
+          }
+        }
+      }
+    ],
+    "pos": {
+      "line": 1,
+      "col": 1,
+      "offset": 0
+    }
+  },
+  "diagnostics": []
+}

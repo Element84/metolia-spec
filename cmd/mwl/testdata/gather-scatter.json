@@ -1,0 +1,30 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 401: scatter fan-out preserving calls order, with an inline-flow target.",
+  "entrypoint": "fan-out",
+  "steps": {
+    "fan-out": {
+      "action": "Gather",
+      "calls": [
+        {
+          "provider": "mwl:provider.call/mwl/mock/v1",
+          "with": { "value": "a" }
+        },
+        {
+          "provider": "mwl:provider.call/mwl/mock/v1",
+          "with": { "value": "b" }
+        },
+        {
+          "flow": {
+            "entrypoint": "emit",
+            "steps": {
+              "emit": { "action": "Return", "value": "c" }
+            }
+          }
+        }
+      ],
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

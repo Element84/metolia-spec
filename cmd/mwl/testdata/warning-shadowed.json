@@ -1,0 +1,32 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Golden fixture: an inner flows entry shadows an outer declaration.",
+  "flows": {
+    "Helper": {
+      "flows": {
+        "Helper": {
+          "entrypoint": "emit",
+          "steps": { "emit": { "action": "Return", "value": "inner" } }
+        }
+      },
+      "entrypoint": "call-inner",
+      "steps": {
+        "call-inner": {
+          "action": "Call",
+          "call": { "flow": "Helper" },
+          "next": "done"
+        },
+        "done": { "action": "Return" }
+      }
+    }
+  },
+  "entrypoint": "go",
+  "steps": {
+    "go": {
+      "action": "Call",
+      "call": { "flow": "Helper" },
+      "next": "end"
+    },
+    "end": { "action": "Return" }
+  }
+}

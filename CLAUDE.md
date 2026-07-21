@@ -8,9 +8,12 @@ code in this repository.
 A Hugo static-site build of the **Metolia Workflow Language (MWL)**
 specification — a JSON-based language for describing orchestrated workflows
 (directed graphs of named steps that call services, branch, run concurrently,
-wait, and handle failures). There is **no application code**; the deliverable is
-the rendered specification site under `public/`. The Hextra theme is loaded as a
-Go module — Go is required only for Hugo's module system, no Go source is built.
+wait, and handle failures) — plus Go tooling for the language. The rendered
+specification site under `public/` is the primary deliverable; the Hextra theme
+is loaded as a Go module. A Go workspace (`go.work`) holds two modules:
+`parser/` (the zero-dependency MWL parser; decisions in `parser/DESIGN.md`) and
+`cmd/mwl/` (the `mwl` CLI; decisions in `cmd/mwl/DESIGN.md`, usage in
+`cmd/mwl/README.md`).
 
 ## ⚠️ Spec changes REQUIRE a schema and test review
 
@@ -52,10 +55,18 @@ bash scripts/check-schemas.sh       # validate the JSON Schemas, instance fixtur
 dprint fmt                          # format all Markdown/JSON
 dprint check                        # verify formatting without writing
 lefthook install                    # install the pre-commit hook
+go test ./parser/ ./cmd/mwl/        # parser and CLI test suites
+go build ./cmd/mwl/                 # build the mwl CLI (produces ./mwl)
 ```
 
 `check-schemas.sh` requires `check-jsonschema`
 (`brew install check-jsonschema`).
+
+The CLI's tests compare output byte-for-byte against golden files in
+`cmd/mwl/testdata/golden/`. After a deliberate output-format change, regenerate
+them with `go test ./... -update` (run in `cmd/mwl/`) and review the diff.
+`cmd/mwl/testdata/` is excluded from dprint on purpose: the golden files bake in
+the fixtures' byte offsets, so reformatting either side breaks the comparison.
 
 The pre-commit hook (see `lefthook.yml`) runs three checks against the staged
 index: `dprint fmt --fail-on-change`, `check-schemas.sh`, and `check-build.sh`.

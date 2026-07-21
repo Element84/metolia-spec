@@ -19,11 +19,20 @@ the [Hextra](https://github.com/imfing/hextra) theme. Source content lives under
 - `content/rationale/` — design principles, non-goals, and architectural
   reasoning.
 
+## Go tooling
+
+Alongside the spec, the repository holds Go tooling in a workspace (`go.work`)
+of two modules:
+
+- `parser/` — the MWL parser: a zero-dependency Go module implementing the
+  three-pass parse (decode, bind, check) with positioned diagnostics.
+- `cmd/mwl/` — the `mwl` command-line tool, currently `mwl parse`. Usage and
+  development notes are in `cmd/mwl/README.md`.
+
 ## Future goals
 
-While this repo's contents are currently limited to the spec and some test
-cases, we full expect to extend the contents of this repo to include API specs
-for the Metolia workflow orchestration runtime, as well as validation and
+We expect to extend the contents of this repo to include API specs for the
+Metolia workflow orchestration runtime, as well as further validation and
 conformance tooling for users and developers.
 
 ## Dependencies
@@ -33,9 +42,9 @@ The repository's tooling assumes the following are installed and available on
 
 - **[Hugo](https://gohugo.io/installation/)** — static site generator. Tested
   with Hugo Extended v0.160+.
-- **[Go](https://go.dev/dl/)** — required by Hugo's module system, which is how
-  this project loads the Hextra theme. Tested with Go 1.26+. No Go code is built
-  directly; Go is invoked transparently by Hugo when fetching theme modules.
+- **[Go](https://go.dev/dl/)** — required by Hugo's module system (which loads
+  the Hextra theme) and by the Go tooling modules (`parser/`, `cmd/mwl/`).
+  Tested with Go 1.26+.
 - **[dprint](https://dprint.dev/install/)** — code formatter used for Markdown
   and JSON. Configured via `dprint.json`.
 - **[lefthook](https://github.com/evilmartians/lefthook)** — Git hook manager.

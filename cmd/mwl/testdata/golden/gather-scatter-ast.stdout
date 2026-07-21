@@ -1,0 +1,188 @@
+{
+  "filename": "testdata/gather-scatter.json",
+  "ast": {
+    "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+    "comment": "Conformance 401: scatter fan-out preserving calls order, with an inline-flow target.",
+    "entrypoint": {
+      "value": "fan-out",
+      "pos": {
+        "line": 4,
+        "col": 17,
+        "offset": 173
+      }
+    },
+    "steps": [
+      {
+        "name": "fan-out",
+        "namePos": {
+          "line": 6,
+          "col": 5,
+          "offset": 201
+        },
+        "step": {
+          "action": "Gather",
+          "calls": [
+            {
+              "provider": {
+                "uri": "mwl:provider.call/mwl/mock/v1",
+                "pos": {
+                  "line": 10,
+                  "col": 23,
+                  "offset": 289
+                }
+              },
+              "with": {
+                "literal": [
+                  {
+                    "name": "value",
+                    "namePos": {
+                      "line": 11,
+                      "col": 21,
+                      "offset": 342
+                    },
+                    "value": {
+                      "kind": "string",
+                      "value": "a",
+                      "pos": {
+                        "line": 11,
+                        "col": 30,
+                        "offset": 351
+                      }
+                    }
+                  }
+                ]
+              },
+              "pos": {
+                "line": 9,
+                "col": 9,
+                "offset": 265
+              }
+            },
+            {
+              "provider": {
+                "uri": "mwl:provider.call/mwl/mock/v1",
+                "pos": {
+                  "line": 14,
+                  "col": 23,
+                  "offset": 400
+                }
+              },
+              "with": {
+                "literal": [
+                  {
+                    "name": "value",
+                    "namePos": {
+                      "line": 15,
+                      "col": 21,
+                      "offset": 453
+                    },
+                    "value": {
+                      "kind": "string",
+                      "value": "b",
+                      "pos": {
+                        "line": 15,
+                        "col": 30,
+                        "offset": 462
+                      }
+                    }
+                  }
+                ]
+              },
+              "pos": {
+                "line": 13,
+                "col": 9,
+                "offset": 376
+              }
+            },
+            {
+              "flow": {
+                "inline": {
+                  "entrypoint": {
+                    "value": "emit",
+                    "pos": {
+                      "line": 19,
+                      "col": 27,
+                      "offset": 535
+                    }
+                  },
+                  "steps": [
+                    {
+                      "name": "emit",
+                      "namePos": {
+                        "line": 21,
+                        "col": 15,
+                        "offset": 580
+                      },
+                      "step": {
+                        "action": "Return",
+                        "value": {
+                          "kind": "string",
+                          "value": "c",
+                          "pos": {
+                            "line": 21,
+                            "col": 54,
+                            "offset": 619
+                          }
+                        },
+                        "pos": {
+                          "line": 21,
+                          "col": 23,
+                          "offset": 588
+                        }
+                      }
+                    }
+                  ],
+                  "pos": {
+                    "line": 18,
+                    "col": 19,
+                    "offset": 507
+                  }
+                }
+              },
+              "pos": {
+                "line": 17,
+                "col": 9,
+                "offset": 487
+              }
+            }
+          ],
+          "next": {
+            "value": "done",
+            "pos": {
+              "line": 26,
+              "col": 15,
+              "offset": 684
+            }
+          },
+          "pos": {
+            "line": 6,
+            "col": 16,
+            "offset": 212
+          }
+        }
+      },
+      {
+        "name": "done",
+        "namePos": {
+          "line": 28,
+          "col": 5,
+          "offset": 702
+        },
+        "step": {
+          "action": "Return",
+          "pos": {
+            "line": 28,
+            "col": 13,
+            "offset": 710
+          }
+        }
+      }
+    ],
+    "pos": {
+      "line": 1,
+      "col": 1,
+      "offset": 0
+    }
+  },
+  "diagnostics": []
+}

@@ -8,6 +8,7 @@
     "lineWidth": 80
   },
   "excludes": [
+    "cmd/mwl/testdata/",
     "public/",
     "resources/",
     ".hugo_build.lock",

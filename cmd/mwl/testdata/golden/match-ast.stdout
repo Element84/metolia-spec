@@ -1,0 +1,145 @@
+{
+  "filename": "testdata/match.json",
+  "ast": {
+    "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+    "comment": "Conformance 300: ordered clause selection over a routing Match.",
+    "entrypoint": {
+      "value": "route",
+      "pos": {
+        "line": 4,
+        "col": 17,
+        "offset": 152
+      }
+    },
+    "steps": [
+      {
+        "name": "route",
+        "namePos": {
+          "line": 6,
+          "col": 5,
+          "offset": 178
+        },
+        "step": {
+          "action": "Match",
+          "cases": [
+            {
+              "when": {
+                "body": "match.input.status == 'approved' && match.input.amount > 1000.0",
+                "pos": {
+                  "line": 10,
+                  "col": 19,
+                  "offset": 259
+                }
+              },
+              "output": {
+                "kind": "string",
+                "value": "manual-review",
+                "pos": {
+                  "line": 11,
+                  "col": 21,
+                  "offset": 352
+                }
+              },
+              "next": {
+                "value": "done",
+                "pos": {
+                  "line": 12,
+                  "col": 19,
+                  "offset": 387
+                }
+              },
+              "pos": {
+                "line": 9,
+                "col": 9,
+                "offset": 239
+              }
+            },
+            {
+              "when": {
+                "body": "match.input.status == 'approved'",
+                "pos": {
+                  "line": 15,
+                  "col": 19,
+                  "offset": 433
+                }
+              },
+              "output": {
+                "kind": "string",
+                "value": "auto-approve",
+                "pos": {
+                  "line": 16,
+                  "col": 21,
+                  "offset": 495
+                }
+              },
+              "next": {
+                "value": "done",
+                "pos": {
+                  "line": 17,
+                  "col": 19,
+                  "offset": 529
+                }
+              },
+              "pos": {
+                "line": 14,
+                "col": 9,
+                "offset": 413
+              }
+            }
+          ],
+          "default": {
+            "output": {
+              "kind": "string",
+              "value": "rejected",
+              "pos": {
+                "line": 21,
+                "col": 19,
+                "offset": 592
+              }
+            },
+            "next": {
+              "value": "done",
+              "pos": {
+                "line": 22,
+                "col": 17,
+                "offset": 620
+              }
+            },
+            "pos": {
+              "line": 20,
+              "col": 18,
+              "offset": 572
+            }
+          },
+          "pos": {
+            "line": 6,
+            "col": 14,
+            "offset": 187
+          }
+        }
+      },
+      {
+        "name": "done",
+        "namePos": {
+          "line": 25,
+          "col": 5,
+          "offset": 646
+        },
+        "step": {
+          "action": "Return",
+          "pos": {
+            "line": 25,
+            "col": 13,
+            "offset": 654
+          }
+        }
+      }
+    ],
+    "pos": {
+      "line": 1,
+      "col": 1,
+      "offset": 0
+    }
+  },
+  "diagnostics": []
+}

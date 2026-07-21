@@ -1,0 +1,228 @@
+{
+  "filename": "testdata/warning-shadowed.json",
+  "ast": {
+    "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+    "comment": "Golden fixture: an inner flows entry shadows an outer declaration.",
+    "entrypoint": {
+      "value": "go",
+      "pos": {
+        "line": 23,
+        "col": 17,
+        "offset": 581
+      }
+    },
+    "flows": [
+      {
+        "name": "Helper",
+        "namePos": {
+          "line": 5,
+          "col": 5,
+          "offset": 156
+        },
+        "flow": {
+          "entrypoint": {
+            "value": "call-inner",
+            "pos": {
+              "line": 12,
+              "col": 21,
+              "offset": 348
+            }
+          },
+          "flows": [
+            {
+              "name": "Helper",
+              "namePos": {
+                "line": 7,
+                "col": 9,
+                "offset": 193
+              },
+              "flow": {
+                "entrypoint": {
+                  "value": "emit",
+                  "pos": {
+                    "line": 8,
+                    "col": 25,
+                    "offset": 229
+                  }
+                },
+                "steps": [
+                  {
+                    "name": "emit",
+                    "namePos": {
+                      "line": 9,
+                      "col": 22,
+                      "offset": 258
+                    },
+                    "step": {
+                      "action": "Return",
+                      "value": {
+                        "kind": "string",
+                        "value": "inner",
+                        "pos": {
+                          "line": 9,
+                          "col": 61,
+                          "offset": 297
+                        }
+                      },
+                      "pos": {
+                        "line": 9,
+                        "col": 30,
+                        "offset": 266
+                      }
+                    }
+                  }
+                ],
+                "pos": {
+                  "line": 7,
+                  "col": 19,
+                  "offset": 203
+                }
+              }
+            }
+          ],
+          "steps": [
+            {
+              "name": "call-inner",
+              "namePos": {
+                "line": 14,
+                "col": 9,
+                "offset": 387
+              },
+              "step": {
+                "action": "Call",
+                "call": {
+                  "flow": {
+                    "name": {
+                      "value": "Helper",
+                      "pos": {
+                        "line": 16,
+                        "col": 29,
+                        "offset": 459
+                      }
+                    }
+                  },
+                  "pos": {
+                    "line": 16,
+                    "col": 19,
+                    "offset": 449
+                  }
+                },
+                "next": {
+                  "value": "done",
+                  "pos": {
+                    "line": 17,
+                    "col": 19,
+                    "offset": 489
+                  }
+                },
+                "pos": {
+                  "line": 14,
+                  "col": 23,
+                  "offset": 401
+                }
+              }
+            },
+            {
+              "name": "done",
+              "namePos": {
+                "line": 19,
+                "col": 9,
+                "offset": 515
+              },
+              "step": {
+                "action": "Return",
+                "pos": {
+                  "line": 19,
+                  "col": 17,
+                  "offset": 523
+                }
+              }
+            }
+          ],
+          "pos": {
+            "line": 5,
+            "col": 15,
+            "offset": 166
+          }
+        }
+      }
+    ],
+    "steps": [
+      {
+        "name": "go",
+        "namePos": {
+          "line": 25,
+          "col": 5,
+          "offset": 604
+        },
+        "step": {
+          "action": "Call",
+          "call": {
+            "flow": {
+              "name": {
+                "value": "Helper",
+                "pos": {
+                  "line": 27,
+                  "col": 25,
+                  "offset": 660
+                }
+              }
+            },
+            "pos": {
+              "line": 27,
+              "col": 15,
+              "offset": 650
+            }
+          },
+          "next": {
+            "value": "end",
+            "pos": {
+              "line": 28,
+              "col": 15,
+              "offset": 686
+            }
+          },
+          "pos": {
+            "line": 25,
+            "col": 11,
+            "offset": 610
+          }
+        }
+      },
+      {
+        "name": "end",
+        "namePos": {
+          "line": 30,
+          "col": 5,
+          "offset": 703
+        },
+        "step": {
+          "action": "Return",
+          "pos": {
+            "line": 30,
+            "col": 12,
+            "offset": 710
+          }
+        }
+      }
+    ],
+    "pos": {
+      "line": 1,
+      "col": 1,
+      "offset": 0
+    }
+  },
+  "diagnostics": [
+    {
+      "severity": "warning",
+      "code": "shadowed-flow",
+      "path": "flows.Helper.flows.Helper",
+      "message": "flows entry \"Helper\" shadows the declaration at testdata/warning-shadowed.json:5:5",
+      "pos": {
+        "line": 7,
+        "col": 9,
+        "offset": 193
+      }
+    }
+  ]
+}

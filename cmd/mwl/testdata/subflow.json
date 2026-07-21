@@ -1,0 +1,46 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 500: a named subflow with parameters and flow.vars capture.",
+  "flows": {
+    "Greet": {
+      "comment": "Greets the payload using the configured greeting.",
+      "parameters": {
+        "type": "object",
+        "required": ["greeting"],
+        "properties": {
+          "greeting": { "type": "string" }
+        }
+      },
+      "entrypoint": "note",
+      "steps": {
+        "note": {
+          "action": "Pass",
+          "assign": { "note": "from-subflow" },
+          "next": "emit"
+        },
+        "emit": {
+          "action": "Return",
+          "value": "{{ vars.greeting + ', ' + step.input }}"
+        }
+      }
+    }
+  },
+  "entrypoint": "greet",
+  "steps": {
+    "greet": {
+      "action": "Call",
+      "call": {
+        "flow": "Greet",
+        "with": { "greeting": "hello" },
+        "onSuccess": {
+          "assign": { "note": "{{ flow.vars.note }}" }
+        }
+      },
+      "next": "wrap"
+    },
+    "wrap": {
+      "action": "Return",
+      "value": "{{ {'greeting': step.input, 'note': vars.note} }}"
+    }
+  }
+}

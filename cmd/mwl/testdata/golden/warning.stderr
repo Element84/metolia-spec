@@ -1,0 +1,1 @@
+testdata/warning-shadowed.json:7:9: warning: flows entry "Helper" shadows the declaration at testdata/warning-shadowed.json:5:5 [shadowed-flow]

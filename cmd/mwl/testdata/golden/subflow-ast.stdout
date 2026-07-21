@@ -1,0 +1,339 @@
+{
+  "filename": "testdata/subflow.json",
+  "ast": {
+    "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+    "comment": "Conformance 500: a named subflow with parameters and flow.vars capture.",
+    "entrypoint": {
+      "value": "greet",
+      "pos": {
+        "line": 28,
+        "col": 17,
+        "offset": 739
+      }
+    },
+    "flows": [
+      {
+        "name": "Greet",
+        "namePos": {
+          "line": 5,
+          "col": 5,
+          "offset": 161
+        },
+        "flow": {
+          "comment": "Greets the payload using the configured greeting.",
+          "entrypoint": {
+            "value": "note",
+            "pos": {
+              "line": 14,
+              "col": 21,
+              "offset": 430
+            }
+          },
+          "parameters": {
+            "kind": "object",
+            "members": [
+              {
+                "name": "type",
+                "namePos": {
+                  "line": 8,
+                  "col": 9,
+                  "offset": 272
+                },
+                "value": {
+                  "kind": "string",
+                  "value": "object",
+                  "pos": {
+                    "line": 8,
+                    "col": 17,
+                    "offset": 280
+                  }
+                }
+              },
+              {
+                "name": "required",
+                "namePos": {
+                  "line": 9,
+                  "col": 9,
+                  "offset": 298
+                },
+                "value": {
+                  "kind": "array",
+                  "elements": [
+                    {
+                      "kind": "string",
+                      "value": "greeting",
+                      "pos": {
+                        "line": 9,
+                        "col": 22,
+                        "offset": 311
+                      }
+                    }
+                  ],
+                  "pos": {
+                    "line": 9,
+                    "col": 21,
+                    "offset": 310
+                  }
+                }
+              },
+              {
+                "name": "properties",
+                "namePos": {
+                  "line": 10,
+                  "col": 9,
+                  "offset": 332
+                },
+                "value": {
+                  "kind": "object",
+                  "members": [
+                    {
+                      "name": "greeting",
+                      "namePos": {
+                        "line": 11,
+                        "col": 11,
+                        "offset": 358
+                      },
+                      "value": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": "type",
+                            "namePos": {
+                              "line": 11,
+                              "col": 25,
+                              "offset": 372
+                            },
+                            "value": {
+                              "kind": "string",
+                              "value": "string",
+                              "pos": {
+                                "line": 11,
+                                "col": 33,
+                                "offset": 380
+                              }
+                            }
+                          }
+                        ],
+                        "pos": {
+                          "line": 11,
+                          "col": 23,
+                          "offset": 370
+                        }
+                      }
+                    }
+                  ],
+                  "pos": {
+                    "line": 10,
+                    "col": 23,
+                    "offset": 346
+                  }
+                }
+              }
+            ],
+            "pos": {
+              "line": 7,
+              "col": 21,
+              "offset": 262
+            }
+          },
+          "steps": [
+            {
+              "name": "note",
+              "namePos": {
+                "line": 16,
+                "col": 9,
+                "offset": 463
+              },
+              "step": {
+                "action": "Pass",
+                "assign": [
+                  {
+                    "name": "note",
+                    "namePos": {
+                      "line": 18,
+                      "col": 23,
+                      "offset": 523
+                    },
+                    "value": {
+                      "kind": "string",
+                      "value": "from-subflow",
+                      "pos": {
+                        "line": 18,
+                        "col": 31,
+                        "offset": 531
+                      }
+                    }
+                  }
+                ],
+                "next": {
+                  "value": "emit",
+                  "pos": {
+                    "line": 19,
+                    "col": 19,
+                    "offset": 567
+                  }
+                },
+                "pos": {
+                  "line": 16,
+                  "col": 17,
+                  "offset": 471
+                }
+              }
+            },
+            {
+              "name": "emit",
+              "namePos": {
+                "line": 21,
+                "col": 9,
+                "offset": 593
+              },
+              "step": {
+                "action": "Return",
+                "value": {
+                  "kind": "expr",
+                  "body": "vars.greeting + ', ' + step.input",
+                  "pos": {
+                    "line": 23,
+                    "col": 20,
+                    "offset": 652
+                  }
+                },
+                "pos": {
+                  "line": 21,
+                  "col": 17,
+                  "offset": 601
+                }
+              }
+            }
+          ],
+          "pos": {
+            "line": 5,
+            "col": 14,
+            "offset": 170
+          }
+        }
+      }
+    ],
+    "steps": [
+      {
+        "name": "greet",
+        "namePos": {
+          "line": 30,
+          "col": 5,
+          "offset": 765
+        },
+        "step": {
+          "action": "Call",
+          "call": {
+            "flow": {
+              "name": {
+                "value": "Greet",
+                "pos": {
+                  "line": 33,
+                  "col": 17,
+                  "offset": 832
+                }
+              }
+            },
+            "with": {
+              "literal": [
+                {
+                  "name": "greeting",
+                  "namePos": {
+                    "line": 34,
+                    "col": 19,
+                    "offset": 859
+                  },
+                  "value": {
+                    "kind": "string",
+                    "value": "hello",
+                    "pos": {
+                      "line": 34,
+                      "col": 31,
+                      "offset": 871
+                    }
+                  }
+                }
+              ]
+            },
+            "onSuccess": {
+              "assign": [
+                {
+                  "name": "note",
+                  "namePos": {
+                    "line": 36,
+                    "col": 23,
+                    "offset": 927
+                  },
+                  "value": {
+                    "kind": "expr",
+                    "body": "flow.vars.note",
+                    "pos": {
+                      "line": 36,
+                      "col": 31,
+                      "offset": 935
+                    }
+                  }
+                }
+              ],
+              "pos": {
+                "line": 35,
+                "col": 22,
+                "offset": 903
+              }
+            },
+            "pos": {
+              "line": 32,
+              "col": 15,
+              "offset": 814
+            }
+          },
+          "next": {
+            "value": "wrap",
+            "pos": {
+              "line": 39,
+              "col": 15,
+              "offset": 993
+            }
+          },
+          "pos": {
+            "line": 30,
+            "col": 14,
+            "offset": 774
+          }
+        }
+      },
+      {
+        "name": "wrap",
+        "namePos": {
+          "line": 41,
+          "col": 5,
+          "offset": 1011
+        },
+        "step": {
+          "action": "Return",
+          "value": {
+            "kind": "expr",
+            "body": "{'greeting': step.input, 'note': vars.note}",
+            "pos": {
+              "line": 43,
+              "col": 16,
+              "offset": 1062
+            }
+          },
+          "pos": {
+            "line": 41,
+            "col": 13,
+            "offset": 1019
+          }
+        }
+      }
+    ],
+    "pos": {
+      "line": 1,
+      "col": 1,
+      "offset": 0
+    }
+  },
+  "diagnostics": []
+}

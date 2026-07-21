@@ -1,0 +1,374 @@
+{
+  "filename": "testdata/middleware.json",
+  "ast": {
+    "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+    "comment": "Conformance 651: the graph raises twice, then routes to success on the third run.",
+    "entrypoint": {
+      "value": "decide",
+      "pos": {
+        "line": 37,
+        "col": 17,
+        "offset": 779
+      }
+    },
+    "parameters": {
+      "kind": "object",
+      "members": [
+        {
+          "name": "type",
+          "namePos": {
+            "line": 5,
+            "col": 5,
+            "offset": 176
+          },
+          "value": {
+            "kind": "string",
+            "value": "object",
+            "pos": {
+              "line": 5,
+              "col": 13,
+              "offset": 184
+            }
+          }
+        },
+        {
+          "name": "properties",
+          "namePos": {
+            "line": 6,
+            "col": 5,
+            "offset": 198
+          },
+          "value": {
+            "kind": "object",
+            "members": [
+              {
+                "name": "tries",
+                "namePos": {
+                  "line": 7,
+                  "col": 7,
+                  "offset": 220
+                },
+                "value": {
+                  "kind": "object",
+                  "members": [
+                    {
+                      "name": "type",
+                      "namePos": {
+                        "line": 8,
+                        "col": 9,
+                        "offset": 239
+                      },
+                      "value": {
+                        "kind": "string",
+                        "value": "string",
+                        "pos": {
+                          "line": 8,
+                          "col": 17,
+                          "offset": 247
+                        }
+                      }
+                    },
+                    {
+                      "name": "default",
+                      "namePos": {
+                        "line": 9,
+                        "col": 9,
+                        "offset": 265
+                      },
+                      "value": {
+                        "kind": "string",
+                        "value": "",
+                        "pos": {
+                          "line": 9,
+                          "col": 20,
+                          "offset": 276
+                        }
+                      }
+                    }
+                  ],
+                  "pos": {
+                    "line": 7,
+                    "col": 16,
+                    "offset": 229
+                  }
+                }
+              }
+            ],
+            "pos": {
+              "line": 6,
+              "col": 19,
+              "offset": 212
+            }
+          }
+        }
+      ],
+      "pos": {
+        "line": 4,
+        "col": 17,
+        "offset": 170
+      }
+    },
+    "middleware": [
+      {
+        "provider": {
+          "uri": "mwl:provider.middleware/mwl/retry/v1",
+          "pos": {
+            "line": 15,
+            "col": 19,
+            "offset": 340
+          }
+        },
+        "onEntry": {
+          "with": {
+            "literal": [
+              {
+                "name": "policies",
+                "namePos": {
+                  "line": 18,
+                  "col": 11,
+                  "offset": 427
+                },
+                "value": {
+                  "kind": "array",
+                  "elements": [
+                    {
+                      "kind": "object",
+                      "members": [
+                        {
+                          "name": "match",
+                          "namePos": {
+                            "line": 20,
+                            "col": 15,
+                            "offset": 469
+                          },
+                          "value": {
+                            "kind": "object",
+                            "members": [
+                              {
+                                "name": "codes",
+                                "namePos": {
+                                  "line": 21,
+                                  "col": 17,
+                                  "offset": 496
+                                },
+                                "value": {
+                                  "kind": "array",
+                                  "elements": [
+                                    {
+                                      "kind": "string",
+                                      "value": "Conformance.*",
+                                      "pos": {
+                                        "line": 22,
+                                        "col": 19,
+                                        "offset": 525
+                                      }
+                                    }
+                                  ],
+                                  "pos": {
+                                    "line": 21,
+                                    "col": 26,
+                                    "offset": 505
+                                  }
+                                }
+                              }
+                            ],
+                            "pos": {
+                              "line": 20,
+                              "col": 24,
+                              "offset": 478
+                            }
+                          }
+                        },
+                        {
+                          "name": "attempts",
+                          "namePos": {
+                            "line": 25,
+                            "col": 15,
+                            "offset": 590
+                          },
+                          "value": {
+                            "kind": "number",
+                            "value": "3",
+                            "pos": {
+                              "line": 25,
+                              "col": 27,
+                              "offset": 602
+                            }
+                          }
+                        }
+                      ],
+                      "pos": {
+                        "line": 19,
+                        "col": 13,
+                        "offset": 453
+                      }
+                    }
+                  ],
+                  "pos": {
+                    "line": 18,
+                    "col": 23,
+                    "offset": 439
+                  }
+                }
+              }
+            ]
+          },
+          "pos": {
+            "line": 16,
+            "col": 18,
+            "offset": 397
+          }
+        },
+        "onFailure": {
+          "assign": [
+            {
+              "name": "tries",
+              "namePos": {
+                "line": 32,
+                "col": 11,
+                "offset": 700
+              },
+              "value": {
+                "kind": "expr",
+                "body": "vars.tries + 'x'",
+                "pos": {
+                  "line": 32,
+                  "col": 20,
+                  "offset": 709
+                }
+              }
+            }
+          ],
+          "pos": {
+            "line": 30,
+            "col": 20,
+            "offset": 668
+          }
+        },
+        "pos": {
+          "line": 14,
+          "col": 5,
+          "offset": 320
+        }
+      }
+    ],
+    "steps": [
+      {
+        "name": "decide",
+        "namePos": {
+          "line": 39,
+          "col": 5,
+          "offset": 806
+        },
+        "step": {
+          "action": "Match",
+          "cases": [
+            {
+              "when": {
+                "body": "size(vars.tries) < 2",
+                "pos": {
+                  "line": 43,
+                  "col": 19,
+                  "offset": 888
+                }
+              },
+              "next": {
+                "value": "boom",
+                "pos": {
+                  "line": 44,
+                  "col": 19,
+                  "offset": 936
+                }
+              },
+              "pos": {
+                "line": 42,
+                "col": 9,
+                "offset": 868
+              }
+            }
+          ],
+          "default": {
+            "next": {
+              "value": "ok",
+              "pos": {
+                "line": 48,
+                "col": 17,
+                "offset": 997
+              }
+            },
+            "pos": {
+              "line": 47,
+              "col": 18,
+              "offset": 979
+            }
+          },
+          "pos": {
+            "line": 39,
+            "col": 15,
+            "offset": 816
+          }
+        }
+      },
+      {
+        "name": "boom",
+        "namePos": {
+          "line": 51,
+          "col": 5,
+          "offset": 1021
+        },
+        "step": {
+          "action": "Raise",
+          "result": {
+            "code": {
+              "literal": "Conformance.InjectedFailure"
+            },
+            "message": {
+              "literal": "not yet"
+            },
+            "pos": {
+              "line": 53,
+              "col": 17,
+              "offset": 1072
+            }
+          },
+          "pos": {
+            "line": 51,
+            "col": 13,
+            "offset": 1029
+          }
+        }
+      },
+      {
+        "name": "ok",
+        "namePos": {
+          "line": 58,
+          "col": 5,
+          "offset": 1169
+        },
+        "step": {
+          "action": "Return",
+          "value": {
+            "kind": "string",
+            "value": "graph-recovered",
+            "pos": {
+              "line": 60,
+              "col": 16,
+              "offset": 1218
+            }
+          },
+          "pos": {
+            "line": 58,
+            "col": 11,
+            "offset": 1175
+          }
+        }
+      }
+    ],
+    "pos": {
+      "line": 1,
+      "col": 1,
+      "offset": 0
+    }
+  },
+  "diagnostics": []
+}

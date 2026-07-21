@@ -1,0 +1,12 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Golden fixture: next references a Step that does not exist.",
+  "entrypoint": "work",
+  "steps": {
+    "work": {
+      "action": "Call",
+      "call": { "provider": "mwl:provider.call/mwl/mock/v1" },
+      "next": "finish"
+    }
+  }
+}
