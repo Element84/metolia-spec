@@ -43,9 +43,9 @@ the reasoning from the code.
     spec's opinions stop (a flow's template fields, a provider's embedded
     schemas), the parser retains a positioned value tree instead.
 11. [Structural validation is hand-written, with the schemas as test oracle](#structural-validation-is-hand-written-with-the-schemas-as-test-oracle)
-    — the bind pass validates structure itself, with no JSON Schema engine in
-    the parse path; a differential test holds it to the published schemas over
-    the fixture corpus.
+    — the bind pass validates structure itself, with no JSON Schema engine
+    anywhere in the module; the fixture corpus is the shared oracle, with the
+    schema-side and parser-side suites each held to its verdicts.
 12. [Diagnostics are collected, with severities](#diagnostics-are-collected-with-severities)
     — a parse reports everything it finds in one run; any error-severity
     diagnostic means a nil AST; the error set is exactly the spec's rejection
@@ -306,21 +306,29 @@ reduce code: the bind pass must examine every field anyway to build the typed
 AST, so schema evaluation would be a second opinion carrying the module's first
 dependency, not a replacement for the bind logic.
 
-What keeps the hand-written pass honest is a differential test. The test suite
-imports a JSON Schema engine as a test-only dependency and runs both the parser
-and the schemas in `static/v0.1/` over the fixture corpus
-(`tests/schemas/valid/`, `tests/schemas/invalid/`), failing when their
-accept/reject verdicts diverge. A test-only import appears in `parser/go.mod`,
-but module graph pruning keeps it out of consumers' builds.
+What keeps the hand-written pass honest is a differential check over the fixture
+corpus (the schema fixtures under `tests/schemas/` plus the published provider
+definitions), held from both sides by two suites that run together in the
+pre-commit hook. `scripts/check-schemas.sh` asserts the schemas' verdict on
+every fixture: the valid set validates, the invalid set is rejected. The
+parser's corpus tests (`TestParseFlowFixtureCorpus`,
+`TestParseProviderFixtureCorpus`) assert the parser's verdict on the same files:
+clean parses on the valid set, error diagnostics and a nil AST on the invalid
+set. A parser-schema divergence on any fixture therefore fails one of the two
+suites. Agreement is checked transitively through the corpus rather than by
+evaluating the schemas in-process, so no JSON Schema engine appears anywhere in
+the module and `parser/go.mod` stays dependency-free even for tests.
 
-The differential test is also the parser-side drift check. The repository
-already requires every normative spec change to land with schema and fixture
-updates, so a change that reaches the schema and fixtures but not the parser
-fails the parser's suite on the next run. The alternative, embedding the schema
-bytes with `go:embed`, is rejected: with no engine in the parse path, embedded
-bytes have nothing to check against at runtime, and behavioral agreement over
-the corpus is a stronger guarantee than byte identity of copies. The schemas are
-read from the repository tree as test inputs.
+The corpus check is also the parser-side drift check. The repository already
+requires every normative spec change to land with schema and fixture updates, so
+a change that reaches the schema and fixtures but not the parser fails the
+parser's suite on the next run. The alternative, embedding the schema bytes with
+`go:embed`, is rejected: with no engine in the parse path, embedded bytes have
+nothing to check against at runtime, and behavioral agreement over the corpus is
+a stronger guarantee than byte identity of copies. One limit is accepted
+knowingly: agreement is only as wide as the corpus, so a divergence on a
+document shape no fixture exercises survives until a fixture names it — the
+price of keeping the engine out.
 
 ## Diagnostics are collected, with severities
 
