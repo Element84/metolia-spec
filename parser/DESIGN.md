@@ -198,10 +198,26 @@ per-variant definitions (`stepCall`, `stepGather`, and so on) one to one, the
 same schema-to-parser correspondence the differential test guards (see
 [Structural validation is hand-written, with the schemas as test oracle](#structural-validation-is-hand-written-with-the-schemas-as-test-oracle)).
 
-The interface treatment is reserved for the seven-way sum. The smaller either/or
-shapes (a call's provider-or-flow target, a `Gather`'s iterate-or-scatter form,
-a `Sleep`'s `for`-or-`until`) are structs with one pointer per arm and a
-bind-time invariant that exactly one arm is set.
+The interface treatment is reserved for the seven-way sum, and the reservation
+follows a rule rather than a headcount. Go has no native sum type, so either
+encoding of a discriminated union is a workaround with its own failure mode.
+Pointer arms leave the exactly-one invariant invisible to the compiler, a
+comment enforced by bind-pass discipline; at two arms the risk is negligible,
+since a reader sees both pointers side by side and an `if`/`else` cannot skip a
+case. The interface keeps each variant's field set honest and its dispatch
+checkable, since a linter can hold a type switch to exhaustiveness, but no field
+can live on an interface, so whatever the variants share is duplicated into each
+or hidden behind methods. A union is therefore encoded as a struct with one
+pointer per arm and a bind-time invariant that exactly one arm is set, and it
+graduates to a closed sum when the variant count makes the one-arm invariant
+illegible and exhaustive handling the thing needing a machine check.
+
+Among MWL's unions, only the Step crosses that line: seven variants sharing only
+`comment`. The two-way shapes stay on the arms side: a call's provider-or-flow
+target, a `Gather`'s iterate-or-scatter form, a `Sleep`'s `for`-or-`until`, and
+a provider definition's two kinds, where one `Provider` struct carries the
+fields the kinds share (the URI, `codePrefix`, the description, the failure
+catalog, the metadata schema) and a pointer arm per kind carries the rest.
 
 ## Named collections keep document order
 
