@@ -47,12 +47,19 @@ main package's directory, so `cmd/mwl` is what makes the installed tool `mwl`
 rather than `cmd`.
 
 A separate module keeps the parser's dependency posture intact—nothing is added
-to `parser/go.mod` for the CLI's sake. The CLI itself also carries no
-third-party dependencies for now: the surface is two subcommands and two flags,
-comfortably within the standard library's `flag` package and a small
-hand-written dispatch. A CLI framework (cobra) earns adoption when `validate` or
-`run` arrive with real flag surfaces of their own; adopting one later changes
-nothing user-visible if command names stay stable.
+to `parser/go.mod` for the CLI's sake. The CLI itself uses no third-party
+packages, and not even the standard library's `flag`: arguments are read by a
+hand-written loop. `flag` contributes nothing to the part with structure—
+subcommand dispatch is hand-written either way—and what remains is two booleans.
+It would also subtract: `flag` stops parsing at the first non-flag argument, so
+in `mwl parse flow x.json --ast`, the natural order, `--ast` would silently read
+as a positional; accepting flags on either side of the file means scanning the
+arguments by hand regardless. Owning the loop also keeps the exit-code contract
+in one place: a usage error reaches exit 2 through the same explicit path as
+every other tool failure instead of inheriting `flag`'s usage-printing and exit
+behavior. A CLI framework (cobra) earns adoption when `validate` or `run` arrive
+with real flag surfaces of their own; adopting one later changes nothing
+user-visible if command names stay stable.
 
 ## `parse` names the document kind
 
