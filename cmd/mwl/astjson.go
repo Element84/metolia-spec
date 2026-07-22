@@ -22,13 +22,15 @@ import (
 
 // writeEnvelope emits the {"filename", "ast", "diagnostics"} envelope,
 // indented, with HTML escaping off so expression bodies read as written.
-func writeEnvelope(w io.Writer, filename string, f *parser.Flow, ds parser.Diagnostics) error {
+// ast is the document's encoded AST (encFlow, encProvider); nil marks a
+// failed parse and renders as JSON null.
+func writeEnvelope(w io.Writer, filename string, ast *obj, ds parser.Diagnostics) error {
 	env := newObj()
 	if filename != "" {
 		env.set("filename", filename)
 	}
-	if f != nil {
-		env.set("ast", encFlow(f))
+	if ast != nil {
+		env.set("ast", ast)
 	} else {
 		env.set("ast", nil)
 	}
@@ -114,6 +116,13 @@ func encFlow(f *parser.Flow) *obj {
 	return walkStruct(reflect.ValueOf(f).Elem(), "", true)
 }
 
+// encProvider walks with classification off throughout: providers have no
+// expression fields, so string leaves in the embedded schemas stay plain
+// strings.
+func encProvider(p *parser.Provider) *obj {
+	return walkStruct(reflect.ValueOf(p).Elem(), "", false)
+}
+
 // stepActions maps each Step variant to its action discriminator, which in
 // Go lives in the type and in the source lives in the "action" field. A
 // new variant that is not added here panics in walkValue, which the golden
@@ -136,20 +145,26 @@ var keyOverrides = map[string]string{
 }
 
 // fieldOrder overrides the struct declaration order where the output order
-// deliberately differs from it. Flow is the one case: the output leads
-// with "$schema" the way a document does.
+// deliberately differs from it: both roots lead with "$schema" the way a
+// document does, and Provider renders its kind arm between the shared
+// identity fields and the shared trailing fields, mirroring document order.
 var fieldOrder = map[reflect.Type][]string{
 	reflect.TypeOf(parser.Flow{}): {
 		"Schema", "Comment", "Entrypoint", "Parameters",
 		"Middleware", "Flows", "Steps", "Pos",
+	},
+	reflect.TypeOf(parser.Provider{}): {
+		"Schema", "URI", "CodePrefix", "Description",
+		"Call", "Middleware", "Metadata", "FailureCatalog", "Pos",
 	},
 }
 
 // omitWhenEmptyString names the string fields where the empty string means
 // "absent" rather than an authored empty value.
 var omitWhenEmptyString = map[string]bool{
-	"Comment": true,
-	"Schema":  true,
+	"Comment":    true,
+	"Schema":     true,
+	"Acceptance": true,
 }
 
 var (
@@ -238,8 +253,6 @@ func walkValue(v reflect.Value, classify bool) any {
 			return encRetryable(&x)
 		case parser.PreviousField:
 			return encPrevious(&x)
-		case parser.ConcurrencyCap:
-			return encConcurrency(&x)
 		}
 		return walkStruct(v, "", classify)
 	case reflect.Slice:
@@ -283,18 +296,6 @@ func encPrevious(p *parser.PreviousField) *obj {
 	default:
 		return newObj().set("literal", encValue(p.Literal, true))
 	}
-}
-
-// encConcurrency keeps the written form: a cap value, or the explicit null
-// the author wrote (equivalent to absent, preserved as written).
-func encConcurrency(c *parser.ConcurrencyCap) *obj {
-	o := newObj()
-	if c.Value != nil {
-		o.set("value", *c.Value)
-	} else {
-		o.set("null", true)
-	}
-	return o.set("pos", encPos(c.Pos))
 }
 
 // encValue encodes a positioned value subtree. With classify set, string

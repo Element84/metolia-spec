@@ -53,6 +53,43 @@ func ParseFlow(src []byte, opts ...Option) (*Flow, Diagnostics) {
 	return flow, diags
 }
 
+// ParseProvider parses a provider definition: a JSON document carrying a
+// catalog entry for either provider kind, discriminated by the type segment
+// of its uri. It runs the same passes as ParseFlow — decode, bind, check —
+// collecting diagnostics across all of them, returned in document order.
+//
+// The returned Provider is nil when any diagnostic has error severity; a
+// non-nil Provider satisfies every structural rule the specification
+// states, and may be accompanied by warnings. The error set is exactly the
+// specification's rejection set. The embedded parameter and metadata
+// schemas are retained as positioned value trees, not evaluated.
+func ParseProvider(src []byte, opts ...Option) (*Provider, Diagnostics) {
+	var o options
+	for _, opt := range opts {
+		opt(&o)
+	}
+
+	tree, diags := decode(src, o.filename)
+	if tree == nil {
+		return nil, diags
+	}
+
+	prov, bindDiags := bindProvider(tree)
+	diags = append(diags, bindDiags...)
+
+	// The check pass assumes an AST that bound without errors; with
+	// errors present the parse fails regardless, so it is skipped.
+	if !diags.HasErrors() {
+		diags = append(diags, checkProvider(prov)...)
+	}
+
+	sortByPosition(diags)
+	if diags.HasErrors() {
+		return nil, diags
+	}
+	return prov, diags
+}
+
 // sortByPosition orders diagnostics by source offset, so findings arrive in
 // document order regardless of which pass produced them. The sort is
 // stable: diagnostics at the same offset keep their emission order.

@@ -22,19 +22,22 @@ func TestGolden(t *testing.T) {
 		stdin    string // fixture path to feed as stdin; empty for none
 		wantExit int
 	}{
-		{name: "raise", args: []string{"parse", "flow", "testdata/raise.json"}, wantExit: 0},
-		{name: "raise-ast", args: []string{"parse", "flow", "testdata/raise.json", "--ast"}, wantExit: 0},
-		{name: "match-ast", args: []string{"parse", "flow", "testdata/match.json", "--ast"}, wantExit: 0},
-		{name: "gather-scatter-ast", args: []string{"parse", "flow", "testdata/gather-scatter.json", "--ast"}, wantExit: 0},
-		{name: "gather-iterate-ast", args: []string{"parse", "flow", "testdata/gather-iterate.json", "--ast"}, wantExit: 0},
-		{name: "subflow-ast", args: []string{"parse", "flow", "testdata/subflow.json", "--ast"}, wantExit: 0},
-		{name: "middleware-ast", args: []string{"parse", "flow", "testdata/middleware.json", "--ast"}, wantExit: 0},
-		{name: "invalid", args: []string{"parse", "flow", "testdata/invalid-unresolved.json"}, wantExit: 1},
-		{name: "invalid-ast", args: []string{"parse", "flow", "testdata/invalid-unresolved.json", "--ast"}, wantExit: 1},
-		{name: "warning", args: []string{"parse", "flow", "testdata/warning-shadowed.json"}, wantExit: 0},
-		{name: "warning-strict", args: []string{"parse", "flow", "testdata/warning-shadowed.json", "--strict"}, wantExit: 1},
-		{name: "warning-ast", args: []string{"parse", "flow", "testdata/warning-shadowed.json", "--ast"}, wantExit: 0},
-		{name: "stdin-ast", args: []string{"parse", "flow", "-", "--ast"}, stdin: "testdata/raise.json", wantExit: 0},
+		{name: "raise", args: []string{"parse", "flow", "testdata/flow/raise.json"}, wantExit: 0},
+		{name: "raise-ast", args: []string{"parse", "flow", "testdata/flow/raise.json", "--ast"}, wantExit: 0},
+		{name: "match-ast", args: []string{"parse", "flow", "testdata/flow/match.json", "--ast"}, wantExit: 0},
+		{name: "gather-scatter-ast", args: []string{"parse", "flow", "testdata/flow/gather-scatter.json", "--ast"}, wantExit: 0},
+		{name: "gather-iterate-ast", args: []string{"parse", "flow", "testdata/flow/gather-iterate.json", "--ast"}, wantExit: 0},
+		{name: "subflow-ast", args: []string{"parse", "flow", "testdata/flow/subflow.json", "--ast"}, wantExit: 0},
+		{name: "middleware-ast", args: []string{"parse", "flow", "testdata/flow/middleware.json", "--ast"}, wantExit: 0},
+		{name: "invalid", args: []string{"parse", "flow", "testdata/flow/invalid-unresolved.json"}, wantExit: 1},
+		{name: "invalid-ast", args: []string{"parse", "flow", "testdata/flow/invalid-unresolved.json", "--ast"}, wantExit: 1},
+		{name: "warning", args: []string{"parse", "flow", "testdata/flow/warning-shadowed.json"}, wantExit: 0},
+		{name: "warning-strict", args: []string{"parse", "flow", "testdata/flow/warning-shadowed.json", "--strict"}, wantExit: 1},
+		{name: "warning-ast", args: []string{"parse", "flow", "testdata/flow/warning-shadowed.json", "--ast"}, wantExit: 0},
+		{name: "stdin-ast", args: []string{"parse", "flow", "-", "--ast"}, stdin: "testdata/flow/raise.json", wantExit: 0},
+		{name: "provider-call-ast", args: []string{"parse", "provider", "testdata/provider/call.json", "--ast"}, wantExit: 0},
+		{name: "provider-middleware-ast", args: []string{"parse", "provider", "testdata/provider/middleware.json", "--ast"}, wantExit: 0},
+		{name: "provider-invalid", args: []string{"parse", "provider", "testdata/provider/invalid-catalog.json"}, wantExit: 1},
 	}
 
 	for _, tc := range cases {
@@ -101,7 +104,8 @@ func TestToolErrors(t *testing.T) {
 		{name: "unknown-command", args: []string{"frobnicate"}, wantExit: 2, wantStderr: "unknown command"},
 		{name: "parse-no-args", args: []string{"parse"}, wantExit: 2, wantStderr: "Usage"},
 		{name: "unknown-kind", args: []string{"parse", "yaml", "x.json"}, wantExit: 2, wantStderr: "unknown document kind"},
-		{name: "provider", args: []string{"parse", "provider", "x.json"}, wantExit: 2, wantStderr: "not yet supported"},
+		{name: "provider-no-input", args: []string{"parse", "provider"}, wantExit: 2, wantStderr: "Usage"},
+		{name: "provider-missing-file", args: []string{"parse", "provider", "testdata/no-such-file.json"}, wantExit: 2, wantStderr: "no-such-file.json"},
 		{name: "missing-file", args: []string{"parse", "flow", "testdata/no-such-file.json"}, wantExit: 2, wantStderr: "no-such-file.json"},
 		{name: "unknown-flag", args: []string{"parse", "flow", "x.json", "--verbose"}, wantExit: 2, wantStderr: "unknown flag"},
 		{name: "extra-arg", args: []string{"parse", "flow", "a.json", "b.json"}, wantExit: 2, wantStderr: "extra argument"},
@@ -130,6 +134,7 @@ func TestHelpAndVersion(t *testing.T) {
 		{"help"},
 		{"parse", "--help"},
 		{"parse", "flow", "--help"},
+		{"parse", "provider", "--help"},
 		{"--version"},
 	} {
 		t.Run(strings.Join(args, "_"), func(t *testing.T) {

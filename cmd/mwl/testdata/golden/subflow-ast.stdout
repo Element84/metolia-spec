@@ -1,5 +1,5 @@
 {
-  "filename": "testdata/subflow.json",
+  "filename": "testdata/flow/subflow.json",
   "ast": {
     "$schema": "https://mwl.dev/v0.1/flow/schema.json",
     "comment": "Conformance 500: a named subflow with parameters and flow.vars capture.",

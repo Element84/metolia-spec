@@ -1,5 +1,5 @@
 {
-  "filename": "testdata/match.json",
+  "filename": "testdata/flow/match.json",
   "ast": {
     "$schema": "https://mwl.dev/v0.1/flow/schema.json",
     "comment": "Conformance 300: ordered clause selection over a routing Match.",

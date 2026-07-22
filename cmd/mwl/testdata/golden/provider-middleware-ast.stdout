@@ -1,0 +1,410 @@
+{
+  "filename": "testdata/provider/middleware.json",
+  "ast": {
+    "$schema": "https://mwl.dev/v0.1/provider/schema.json",
+    "uri": {
+      "value": "mwl:provider.middleware/example/audit/v1",
+      "pos": {
+        "line": 3,
+        "col": 10,
+        "offset": 69
+      }
+    },
+    "codePrefix": {
+      "value": "Audit",
+      "pos": {
+        "line": 4,
+        "col": 17,
+        "offset": 129
+      }
+    },
+    "description": "Records entries and exits, and may substitute a success for a matching failure.",
+    "middleware": {
+      "attachment": [
+        {
+          "value": "step",
+          "pos": {
+            "line": 6,
+            "col": 18,
+            "offset": 255
+          }
+        },
+        {
+          "value": "flow",
+          "pos": {
+            "line": 6,
+            "col": 26,
+            "offset": 263
+          }
+        }
+      ],
+      "phases": {
+        "onEntry": {
+          "action": {
+            "kind": {
+              "value": "side-effect",
+              "pos": {
+                "line": 10,
+                "col": 17,
+                "offset": 337
+              }
+            },
+            "description": "Records the entry.",
+            "pos": {
+              "line": 9,
+              "col": 17,
+              "offset": 319
+            }
+          },
+          "parameters": {
+            "kind": "object",
+            "members": [
+              {
+                "name": "type",
+                "namePos": {
+                  "line": 14,
+                  "col": 9,
+                  "offset": 435
+                },
+                "value": {
+                  "kind": "string",
+                  "value": "object",
+                  "pos": {
+                    "line": 14,
+                    "col": 17,
+                    "offset": 443
+                  }
+                }
+              },
+              {
+                "name": "additionalProperties",
+                "namePos": {
+                  "line": 15,
+                  "col": 9,
+                  "offset": 461
+                },
+                "value": {
+                  "kind": "bool",
+                  "value": false,
+                  "pos": {
+                    "line": 15,
+                    "col": 33,
+                    "offset": 485
+                  }
+                }
+              },
+              {
+                "name": "properties",
+                "namePos": {
+                  "line": 16,
+                  "col": 9,
+                  "offset": 500
+                },
+                "value": {
+                  "kind": "object",
+                  "members": [
+                    {
+                      "name": "template",
+                      "namePos": {
+                        "line": 17,
+                        "col": 11,
+                        "offset": 526
+                      },
+                      "value": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": "type",
+                            "namePos": {
+                              "line": 17,
+                              "col": 25,
+                              "offset": 540
+                            },
+                            "value": {
+                              "kind": "string",
+                              "value": "object",
+                              "pos": {
+                                "line": 17,
+                                "col": 33,
+                                "offset": 548
+                              }
+                            }
+                          },
+                          {
+                            "name": "description",
+                            "namePos": {
+                              "line": 17,
+                              "col": 43,
+                              "offset": 558
+                            },
+                            "value": {
+                              "kind": "string",
+                              "value": "The record template, taken structurally.",
+                              "pos": {
+                                "line": 17,
+                                "col": 58,
+                                "offset": 573
+                              }
+                            }
+                          }
+                        ],
+                        "pos": {
+                          "line": 17,
+                          "col": 23,
+                          "offset": 538
+                        }
+                      }
+                    },
+                    {
+                      "name": "level",
+                      "namePos": {
+                        "line": 18,
+                        "col": 11,
+                        "offset": 629
+                      },
+                      "value": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": "type",
+                            "namePos": {
+                              "line": 18,
+                              "col": 22,
+                              "offset": 640
+                            },
+                            "value": {
+                              "kind": "string",
+                              "value": "string",
+                              "pos": {
+                                "line": 18,
+                                "col": 30,
+                                "offset": 648
+                              }
+                            }
+                          },
+                          {
+                            "name": "description",
+                            "namePos": {
+                              "line": 18,
+                              "col": 40,
+                              "offset": 658
+                            },
+                            "value": {
+                              "kind": "string",
+                              "value": "The record level.",
+                              "pos": {
+                                "line": 18,
+                                "col": 55,
+                                "offset": 673
+                              }
+                            }
+                          }
+                        ],
+                        "pos": {
+                          "line": 18,
+                          "col": 20,
+                          "offset": 638
+                        }
+                      }
+                    }
+                  ],
+                  "pos": {
+                    "line": 16,
+                    "col": 23,
+                    "offset": 514
+                  }
+                }
+              }
+            ],
+            "pos": {
+              "line": 13,
+              "col": 21,
+              "offset": 425
+            }
+          },
+          "structural": [
+            {
+              "value": "template",
+              "pos": {
+                "line": 21,
+                "col": 22,
+                "offset": 735
+              }
+            }
+          ],
+          "pos": {
+            "line": 8,
+            "col": 16,
+            "offset": 301
+          }
+        },
+        "onFailure": {
+          "action": {
+            "kind": {
+              "value": "control",
+              "pos": {
+                "line": 25,
+                "col": 17,
+                "offset": 807
+              }
+            },
+            "description": "May substitute a success for a matching failure.",
+            "acceptance": "The rising failure is committed once the action declines it.",
+            "pos": {
+              "line": 24,
+              "col": 17,
+              "offset": 789
+            }
+          },
+          "pos": {
+            "line": 23,
+            "col": 18,
+            "offset": 771
+          }
+        },
+        "pos": {
+          "line": 7,
+          "col": 13,
+          "offset": 284
+        }
+      }
+    },
+    "metadata": {
+      "kind": "object",
+      "members": [
+        {
+          "name": "type",
+          "namePos": {
+            "line": 32,
+            "col": 5,
+            "offset": 1017
+          },
+          "value": {
+            "kind": "string",
+            "value": "object",
+            "pos": {
+              "line": 32,
+              "col": 13,
+              "offset": 1025
+            }
+          }
+        },
+        {
+          "name": "additionalProperties",
+          "namePos": {
+            "line": 33,
+            "col": 5,
+            "offset": 1039
+          },
+          "value": {
+            "kind": "bool",
+            "value": false,
+            "pos": {
+              "line": 33,
+              "col": 29,
+              "offset": 1063
+            }
+          }
+        },
+        {
+          "name": "properties",
+          "namePos": {
+            "line": 34,
+            "col": 5,
+            "offset": 1074
+          },
+          "value": {
+            "kind": "object",
+            "members": [
+              {
+                "name": "records",
+                "namePos": {
+                  "line": 35,
+                  "col": 7,
+                  "offset": 1096
+                },
+                "value": {
+                  "kind": "object",
+                  "members": [
+                    {
+                      "name": "type",
+                      "namePos": {
+                        "line": 35,
+                        "col": 20,
+                        "offset": 1109
+                      },
+                      "value": {
+                        "kind": "string",
+                        "value": "number",
+                        "pos": {
+                          "line": 35,
+                          "col": 28,
+                          "offset": 1117
+                        }
+                      }
+                    },
+                    {
+                      "name": "description",
+                      "namePos": {
+                        "line": 35,
+                        "col": 38,
+                        "offset": 1127
+                      },
+                      "value": {
+                        "kind": "string",
+                        "value": "Records written so far.",
+                        "pos": {
+                          "line": 35,
+                          "col": 53,
+                          "offset": 1142
+                        }
+                      }
+                    }
+                  ],
+                  "pos": {
+                    "line": 35,
+                    "col": 18,
+                    "offset": 1107
+                  }
+                }
+              }
+            ],
+            "pos": {
+              "line": 34,
+              "col": 19,
+              "offset": 1088
+            }
+          }
+        }
+      ],
+      "pos": {
+        "line": 31,
+        "col": 15,
+        "offset": 1011
+      }
+    },
+    "failureCatalog": {
+      "closed": [
+        {
+          "value": "Provider.Middleware.Audit.SinkUnavailable",
+          "pos": {
+            "line": 39,
+            "col": 16,
+            "offset": 1218
+          }
+        }
+      ],
+      "pos": {
+        "line": 38,
+        "col": 21,
+        "offset": 1201
+      }
+    },
+    "pos": {
+      "line": 1,
+      "col": 1,
+      "offset": 0
+    }
+  },
+  "diagnostics": []
+}

@@ -1,5 +1,5 @@
 {
-  "filename": "testdata/invalid-unresolved.json",
+  "filename": "testdata/flow/invalid-unresolved.json",
   "ast": null,
   "diagnostics": [
     {

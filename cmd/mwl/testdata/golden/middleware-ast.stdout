@@ -1,5 +1,5 @@
 {
-  "filename": "testdata/middleware.json",
+  "filename": "testdata/flow/middleware.json",
   "ast": {
     "$schema": "https://mwl.dev/v0.1/flow/schema.json",
     "comment": "Conformance 651: the graph raises twice, then routes to success on the third run.",

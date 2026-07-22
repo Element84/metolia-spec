@@ -1,5 +1,5 @@
 {
-  "filename": "testdata/raise.json",
+  "filename": "testdata/flow/raise.json",
   "ast": {
     "$schema": "https://mwl.dev/v0.1/flow/schema.json",
     "comment": "Conformance 210: Raise constructs a failure envelope from nothing.",

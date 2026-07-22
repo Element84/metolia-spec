@@ -1,5 +1,5 @@
 {
-  "filename": "testdata/gather-iterate.json",
+  "filename": "testdata/flow/gather-iterate.json",
   "ast": {
     "$schema": "https://mwl.dev/v0.1/flow/schema.json",
     "comment": "Golden fixture: the iterate Gather form with completion, concurrency, and catch.",

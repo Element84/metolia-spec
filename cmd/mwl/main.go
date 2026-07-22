@@ -35,7 +35,7 @@ Use "mwl parse --help" for details on a command.
 
 const parseUsage = `Usage:
   mwl parse flow <file|-> [--ast] [--strict]
-  mwl parse provider <file|->
+  mwl parse provider <file|-> [--ast] [--strict]
 
 Parse a document and report diagnostics. Diagnostics print to stderr as
 "file:line:col: severity: message [code]", one per line, in document order;
@@ -87,11 +87,8 @@ func runParse(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	case "--help", "-h":
 		fmt.Fprint(stdout, parseUsage)
 		return 0
-	case "flow":
-		return runParseFlow(args[1:], stdin, stdout, stderr)
-	case "provider":
-		fmt.Fprintln(stderr, "mwl parse provider: not yet supported (the parser does not implement ParseProvider yet)")
-		return 2
+	case "flow", "provider":
+		return runParseDoc(args[0], args[1:], stdin, stdout, stderr)
 	default:
 		fmt.Fprintf(stderr, "mwl parse: unknown document kind %q (want \"flow\" or \"provider\")\n\n", args[0])
 		fmt.Fprint(stderr, parseUsage)
@@ -99,7 +96,7 @@ func runParse(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	}
 }
 
-func runParseFlow(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+func runParseDoc(kind string, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	var ast, strict bool
 	var input string
 	var haveInput bool
@@ -114,12 +111,12 @@ func runParseFlow(args []string, stdin io.Reader, stdout, stderr io.Writer) int 
 			return 0
 		default:
 			if len(a) > 1 && a[0] == '-' {
-				fmt.Fprintf(stderr, "mwl parse flow: unknown flag %q\n\n", a)
+				fmt.Fprintf(stderr, "mwl parse %s: unknown flag %q\n\n", kind, a)
 				fmt.Fprint(stderr, parseUsage)
 				return 2
 			}
 			if haveInput {
-				fmt.Fprintf(stderr, "mwl parse flow: unexpected extra argument %q\n\n", a)
+				fmt.Fprintf(stderr, "mwl parse %s: unexpected extra argument %q\n\n", kind, a)
 				fmt.Fprint(stderr, parseUsage)
 				return 2
 			}
@@ -143,18 +140,35 @@ func runParseFlow(args []string, stdin io.Reader, stdout, stderr io.Writer) int 
 		opts = append(opts, parser.WithFilename(input))
 	}
 	if err != nil {
-		fmt.Fprintf(stderr, "mwl parse flow: %v\n", err)
+		fmt.Fprintf(stderr, "mwl parse %s: %v\n", kind, err)
 		return 2
 	}
 
-	flow, diags := parser.ParseFlow(src, opts...)
+	// The encoded AST for the envelope; nil renders as JSON null, the
+	// failed-parse form.
+	var encoded *obj
+	var diags parser.Diagnostics
+	switch kind {
+	case "flow":
+		var flow *parser.Flow
+		flow, diags = parser.ParseFlow(src, opts...)
+		if flow != nil {
+			encoded = encFlow(flow)
+		}
+	case "provider":
+		var prov *parser.Provider
+		prov, diags = parser.ParseProvider(src, opts...)
+		if prov != nil {
+			encoded = encProvider(prov)
+		}
+	}
 
 	for _, d := range diags {
 		fmt.Fprintln(stderr, d.String())
 	}
 	if ast {
-		if err := writeEnvelope(stdout, filename, flow, diags); err != nil {
-			fmt.Fprintf(stderr, "mwl parse flow: writing envelope: %v\n", err)
+		if err := writeEnvelope(stdout, filename, encoded, diags); err != nil {
+			fmt.Fprintf(stderr, "mwl parse %s: writing envelope: %v\n", kind, err)
 			return 2
 		}
 	}

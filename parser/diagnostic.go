@@ -87,6 +87,17 @@ const (
 	// of the same name in an enclosing Flow. Shadowing is legal; the
 	// nearest declaration wins at every call site within the inner Flow.
 	CodeShadowedFlow = "shadowed-flow"
+	// CodeCatalogOutsidePrefix reports a failure-catalog entry — a closed
+	// code, or an open sub-prefix other than the lone "*" — whose kind or
+	// codePrefix segment disagrees with the provider's own. Legal, but
+	// rarely what the author meant: the catalog constrains the provider's
+	// emissions, and those sit under its own slice of the taxonomy.
+	CodeCatalogOutsidePrefix = "catalog-outside-prefix"
+	// CodeStructuralUnknownParameter reports a structural name matching
+	// no key of its phase's parameters top-level properties. Legal,
+	// because a parameter schema may admit members in other ways, but the
+	// declaration marks nothing.
+	CodeStructuralUnknownParameter = "structural-unknown-parameter"
 )
 
 // severityOf returns the severity a code always carries: severity is a
@@ -94,7 +105,7 @@ const (
 // complete warning list; every other code is an error.
 func severityOf(code string) Severity {
 	switch code {
-	case CodeShadowedFlow:
+	case CodeShadowedFlow, CodeCatalogOutsidePrefix, CodeStructuralUnknownParameter:
 		return SeverityWarning
 	default:
 		return SeverityError

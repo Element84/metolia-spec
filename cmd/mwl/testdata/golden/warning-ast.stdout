@@ -1,5 +1,5 @@
 {
-  "filename": "testdata/warning-shadowed.json",
+  "filename": "testdata/flow/warning-shadowed.json",
   "ast": {
     "$schema": "https://mwl.dev/v0.1/flow/schema.json",
     "comment": "Golden fixture: an inner flows entry shadows an outer declaration.",
@@ -217,7 +217,7 @@
       "severity": "warning",
       "code": "shadowed-flow",
       "path": "flows.Helper.flows.Helper",
-      "message": "flows entry \"Helper\" shadows the declaration at testdata/warning-shadowed.json:5:5",
+      "message": "flows entry \"Helper\" shadows the declaration at testdata/flow/warning-shadowed.json:5:5",
       "pos": {
         "line": 7,
         "col": 9,

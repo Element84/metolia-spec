@@ -1,0 +1,1020 @@
+package parser
+
+// This file is the bind pass for a workflow definition: the Flow object,
+// its Steps, calls, catch clauses, and middleware entries.
+
+// flowSchemaURI is the $schema value a root workflow definition must carry.
+const flowSchemaURI = "https://mwl.dev/v0.1/flow/schema.json"
+
+// bind is the structural pass: it walks the positioned value tree and
+// produces the typed AST, validating along the way that each object is the
+// right shape — required members present, types correct, no unrecognized
+// members, and the per-object constraints the schema and prose state. It
+// binds what it can past individual findings so one bad Step does not hide
+// another's diagnostics.
+func bind(root *Value) (*Flow, Diagnostics) {
+	b := &binder{}
+	if root.Kind != KindObject {
+		b.errorAt(CodeWrongType, root.Pos,
+			"the root of a workflow definition must be an object, not %s", root.Kind)
+		return nil, b.diags
+	}
+	f := b.bindFlow(root, true)
+	return f, b.diags
+}
+
+// Flow --------------------------------------------------------------------
+
+func (b *binder) bindFlow(v *Value, root bool) *Flow {
+	if v.Kind != KindObject {
+		b.errorAt(CodeWrongType, v.Pos, "a Flow must be an object, not %s", v.Kind)
+		return nil
+	}
+	f := &Flow{Pos: v.Pos}
+	var hasSchema, hasEntrypoint, hasSteps bool
+	for _, m := range v.Object {
+		b.pushKey(m.Name)
+		switch m.Name {
+		case "$schema":
+			if !root {
+				b.errorAt(CodeUnknownMember, m.NamePos,
+					"unknown member %q: $schema is permitted on the root document only", m.Name)
+				break
+			}
+			hasSchema = true
+			if s, ok := b.requireString(m.Value, "$schema"); ok {
+				f.Schema = s
+				if s != flowSchemaURI {
+					b.errorAt(CodeInvalidValue, m.Value.Pos, "$schema must be %q", flowSchemaURI)
+				}
+			}
+		case "comment":
+			f.Comment = b.bindComment(m.Value)
+		case "entrypoint":
+			hasEntrypoint = true
+			f.Entrypoint = b.bindName(m.Value, "entrypoint")
+		case "flows":
+			f.Flows, f.flowIndex = b.bindFlows(m.Value)
+		case "middleware":
+			f.Middleware = b.bindMiddlewareStack(m.Value)
+		case "parameters":
+			f.Parameters = b.bindObjectSchema(m.Value, "parameters")
+		case "steps":
+			hasSteps = true
+			f.Steps, f.stepIndex = b.bindSteps(m.Value)
+		default:
+			b.unknownMember(m, "a Flow")
+		}
+		b.pop()
+	}
+	if root && !hasSchema {
+		b.missingMember(v.Pos, "the root document requires $schema")
+	}
+	if !hasEntrypoint {
+		b.missingMember(v.Pos, "a Flow requires entrypoint")
+	}
+	if !hasSteps {
+		b.missingMember(v.Pos, "a Flow requires steps")
+	}
+	return f
+}
+
+func (b *binder) bindFlows(v *Value) ([]NamedFlow, map[string]int) {
+	if v.Kind != KindObject {
+		b.errorAt(CodeWrongType, v.Pos, "flows must be an object of named Flows, not %s", v.Kind)
+		return nil, nil
+	}
+	var flows []NamedFlow
+	index := make(map[string]int)
+	for _, m := range v.Object {
+		if _, isExpr := ExprBody(m.Name); isExpr {
+			b.errorAt(CodeExpressionNotPermitted, m.NamePos,
+				"a flow name is structural and does not accept an expression")
+		}
+		b.pushKey(m.Name)
+		fl := b.bindFlow(m.Value, false)
+		b.pop()
+		if fl != nil {
+			index[m.Name] = len(flows)
+			flows = append(flows, NamedFlow{Name: m.Name, NamePos: m.NamePos, Flow: fl})
+		}
+	}
+	return flows, index
+}
+
+func (b *binder) bindSteps(v *Value) ([]NamedStep, map[string]int) {
+	if v.Kind != KindObject {
+		b.errorAt(CodeWrongType, v.Pos, "steps must be an object of named Steps, not %s", v.Kind)
+		return nil, nil
+	}
+	if len(v.Object) == 0 {
+		b.errorAt(CodeInvalidValue, v.Pos, "steps must define at least one Step")
+	}
+	var steps []NamedStep
+	index := make(map[string]int)
+	for _, m := range v.Object {
+		if _, isExpr := ExprBody(m.Name); isExpr {
+			b.errorAt(CodeExpressionNotPermitted, m.NamePos,
+				"a Step name is structural and does not accept an expression")
+		}
+		b.pushKey(m.Name)
+		s := b.bindStep(m.Value)
+		b.pop()
+		if s != nil {
+			index[m.Name] = len(steps)
+			steps = append(steps, NamedStep{Name: m.Name, NamePos: m.NamePos, Step: s})
+		}
+	}
+	return steps, index
+}
+
+// Steps -------------------------------------------------------------------
+
+func (b *binder) bindStep(v *Value) Step {
+	if v.Kind != KindObject {
+		b.errorAt(CodeWrongType, v.Pos, "a Step must be an object, not %s", v.Kind)
+		return nil
+	}
+	action := v.Field("action")
+	if action == nil {
+		b.missingMember(v.Pos, "a Step requires action")
+		return nil
+	}
+	name, ok := b.requireString(action, "action")
+	if !ok {
+		return nil
+	}
+	switch name {
+	case "Call":
+		return b.bindCallStep(v)
+	case "Gather":
+		return b.bindGatherStep(v)
+	case "Match":
+		return b.bindMatchStep(v)
+	case "Pass":
+		return b.bindPassStep(v)
+	case "Sleep":
+		return b.bindSleepStep(v)
+	case "Return":
+		return b.bindReturnStep(v)
+	case "Raise":
+		return b.bindRaiseStep(v)
+	default:
+		b.errorAt(CodeInvalidValue, action.Pos,
+			"unknown action %q; expected Call, Gather, Match, Pass, Sleep, Return, or Raise", name)
+		return nil
+	}
+}
+
+func (b *binder) bindCallStep(v *Value) *CallStep {
+	s := &CallStep{Pos: v.Pos}
+	var hasCall, hasNext bool
+	for _, m := range v.Object {
+		b.pushKey(m.Name)
+		switch m.Name {
+		case "action":
+		case "call":
+			hasCall = true
+			s.Call = b.bindCall(m.Value)
+		case "input":
+			s.Input = m.Value
+		case "output":
+			s.Output = m.Value
+		case "assign":
+			s.Assign = b.bindAssign(m.Value)
+		case "middleware":
+			s.Middleware = b.bindMiddlewareStack(m.Value)
+		case "catch":
+			s.Catch = b.bindCatch(m.Value)
+		case "next":
+			hasNext = true
+			s.Next = b.bindName(m.Value, "next")
+		case "comment":
+			s.Comment = b.bindComment(m.Value)
+		default:
+			b.unknownMember(m, "a Call Step")
+		}
+		b.pop()
+	}
+	if !hasCall {
+		b.missingMember(v.Pos, "a Call Step requires call")
+	}
+	if !hasNext {
+		b.missingMember(v.Pos, "a Call Step requires next")
+	}
+	return s
+}
+
+func (b *binder) bindGatherStep(v *Value) *GatherStep {
+	s := &GatherStep{Pos: v.Pos}
+	var hasOver, hasCall, hasCalls, hasNext bool
+	for _, m := range v.Object {
+		b.pushKey(m.Name)
+		switch m.Name {
+		case "action":
+		case "over":
+			hasOver = true
+			s.Over = b.bindOver(m.Value)
+		case "call":
+			hasCall = true
+			s.Call = b.bindCall(m.Value)
+		case "calls":
+			hasCalls = true
+			s.Calls = b.bindCalls(m.Value)
+		case "completion":
+			s.Completion = b.bindCompletion(m.Value)
+		case "concurrency":
+			s.Concurrency = b.bindConcurrency(m.Value)
+		case "output":
+			s.Output = m.Value
+		case "assign":
+			s.Assign = b.bindAssign(m.Value)
+		case "catch":
+			s.Catch = b.bindCatch(m.Value)
+		case "next":
+			hasNext = true
+			s.Next = b.bindName(m.Value, "next")
+		case "comment":
+			s.Comment = b.bindComment(m.Value)
+		default:
+			b.unknownMember(m, "a Gather Step")
+		}
+		b.pop()
+	}
+	switch {
+	case hasCalls && (hasOver || hasCall):
+		b.errorAt(CodeExclusiveMembers, v.Pos,
+			"a Gather carries exactly one of its two forms: over with call, or calls")
+	case !hasCalls && !hasOver && !hasCall:
+		b.errorAt(CodeExclusiveMembers, v.Pos,
+			"a Gather carries exactly one of its two forms: over with call, or calls")
+	case hasOver && !hasCall:
+		b.missingMember(v.Pos, "the iterate form requires call beside over")
+	case hasCall && !hasOver:
+		b.missingMember(v.Pos, "the iterate form requires over beside call")
+	}
+	if !hasNext {
+		b.missingMember(v.Pos, "a Gather Step requires next")
+	}
+	return s
+}
+
+func (b *binder) bindOver(v *Value) *OrExpr[[]*Value] {
+	switch v.Kind {
+	case KindArray:
+		lit := v.Array
+		return &OrExpr[[]*Value]{Literal: &lit}
+	case KindString:
+		if body, ok := ExprBody(v.Str); ok {
+			return &OrExpr[[]*Value]{Expr: &Expr{Body: body, Pos: v.Pos}}
+		}
+		b.errorAt(CodeWrongType, v.Pos, "over must be an array or an expression")
+	default:
+		b.errorAt(CodeWrongType, v.Pos, "over must be an array or an expression, not %s", v.Kind)
+	}
+	return nil
+}
+
+func (b *binder) bindCalls(v *Value) []*Call {
+	if v.Kind != KindArray {
+		b.errorAt(CodeWrongType, v.Pos, "calls must be an array of call objects, not %s", v.Kind)
+		return nil
+	}
+	if len(v.Array) == 0 {
+		b.errorAt(CodeInvalidValue, v.Pos, "calls must be a non-empty array")
+		return nil
+	}
+	var calls []*Call
+	for i, e := range v.Array {
+		b.pushIdx(i)
+		c := b.bindCall(e)
+		b.pop()
+		if c != nil {
+			calls = append(calls, c)
+		}
+	}
+	return calls
+}
+
+func (b *binder) bindCompletion(v *Value) *Completion {
+	if v.Kind != KindObject {
+		b.errorAt(CodeWrongType, v.Pos, "completion must be an object, not %s", v.Kind)
+		return nil
+	}
+	c := &Completion{Pos: v.Pos}
+	var hasSuccesses bool
+	for _, m := range v.Object {
+		b.pushKey(m.Name)
+		switch m.Name {
+		case "successes":
+			hasSuccesses = true
+			if x, ok := b.bindIntOrExpr(m.Value, "successes"); ok {
+				c.Successes = x
+			}
+		case "wait":
+			if m.Value.Kind != KindBool {
+				b.errorAt(CodeWrongType, m.Value.Pos,
+					"wait must be a literal boolean; it does not accept an expression")
+			} else {
+				lit := m.Value.Bool
+				c.Wait = &lit
+			}
+		default:
+			b.unknownMember(m, "a completion policy")
+		}
+		b.pop()
+	}
+	if !hasSuccesses {
+		b.missingMember(v.Pos, "a completion policy requires successes")
+	}
+	return c
+}
+
+func (b *binder) bindConcurrency(v *Value) *ConcurrencyCap {
+	switch v.Kind {
+	case KindNull:
+		// An empty spelling: an explicit null binds exactly as an
+		// absent field does (see DESIGN.md, "The typed AST normalizes
+		// empty spellings").
+		return nil
+	case KindNumber:
+		n, ok := intFromLexeme(v.Number)
+		if !ok {
+			b.errorAt(CodeInvalidValue, v.Pos, "concurrency must be an integer")
+			return nil
+		}
+		if n < 1 {
+			b.errorAt(CodeInvalidValue, v.Pos, "concurrency must be at least 1")
+			return nil
+		}
+		return &ConcurrencyCap{Pos: v.Pos, Value: n}
+	default:
+		b.errorAt(CodeWrongType, v.Pos,
+			"concurrency must be an integer or null; it does not accept an expression")
+		return nil
+	}
+}
+
+func (b *binder) bindMatchStep(v *Value) *MatchStep {
+	s := &MatchStep{Pos: v.Pos}
+	var hasCases, hasDefault bool
+	for _, m := range v.Object {
+		b.pushKey(m.Name)
+		switch m.Name {
+		case "action":
+		case "input":
+			s.Input = m.Value
+		case "cases":
+			hasCases = true
+			s.Cases = b.bindMatchCases(m.Value)
+		case "default":
+			hasDefault = true
+			s.Default = b.bindMatchDefault(m.Value)
+		case "comment":
+			s.Comment = b.bindComment(m.Value)
+		default:
+			b.unknownMember(m, "a Match Step")
+		}
+		b.pop()
+	}
+	if !hasCases {
+		b.missingMember(v.Pos, "a Match Step requires cases")
+	}
+	if !hasDefault {
+		b.missingMember(v.Pos, "a Match Step requires default")
+	}
+	return s
+}
+
+func (b *binder) bindMatchCases(v *Value) []MatchCase {
+	if v.Kind != KindArray {
+		b.errorAt(CodeWrongType, v.Pos, "cases must be an array of clauses, not %s", v.Kind)
+		return nil
+	}
+	var cases []MatchCase
+	for i, e := range v.Array {
+		b.pushIdx(i)
+		if c, ok := b.bindMatchCase(e); ok {
+			cases = append(cases, c)
+		}
+		b.pop()
+	}
+	return cases
+}
+
+func (b *binder) bindMatchCase(v *Value) (MatchCase, bool) {
+	if v.Kind != KindObject {
+		b.errorAt(CodeWrongType, v.Pos, "a cases clause must be an object, not %s", v.Kind)
+		return MatchCase{}, false
+	}
+	c := MatchCase{Pos: v.Pos}
+	var hasWhen, hasNext bool
+	for _, m := range v.Object {
+		b.pushKey(m.Name)
+		switch m.Name {
+		case "when":
+			hasWhen = true
+			if e := b.bindExpr(m.Value, "when"); e != nil {
+				c.When = *e
+			}
+		case "output":
+			c.Output = m.Value
+		case "assign":
+			c.Assign = b.bindAssign(m.Value)
+		case "next":
+			hasNext = true
+			c.Next = b.bindName(m.Value, "next")
+		case "comment":
+			c.Comment = b.bindComment(m.Value)
+		default:
+			b.unknownMember(m, "a cases clause")
+		}
+		b.pop()
+	}
+	if !hasWhen {
+		b.missingMember(v.Pos, "a cases clause requires when")
+	}
+	if !hasNext {
+		b.missingMember(v.Pos, "a cases clause requires next")
+	}
+	return c, true
+}
+
+func (b *binder) bindMatchDefault(v *Value) MatchDefault {
+	if v.Kind != KindObject {
+		b.errorAt(CodeWrongType, v.Pos, "default must be an object, not %s", v.Kind)
+		return MatchDefault{}
+	}
+	d := MatchDefault{Pos: v.Pos}
+	var hasNext bool
+	for _, m := range v.Object {
+		b.pushKey(m.Name)
+		switch m.Name {
+		case "when":
+			b.errorAt(CodeUnknownMember, m.NamePos,
+				"unknown member \"when\": the default clause carries no predicate")
+		case "output":
+			d.Output = m.Value
+		case "assign":
+			d.Assign = b.bindAssign(m.Value)
+		case "next":
+			hasNext = true
+			d.Next = b.bindName(m.Value, "next")
+		case "comment":
+			d.Comment = b.bindComment(m.Value)
+		default:
+			b.unknownMember(m, "the default clause")
+		}
+		b.pop()
+	}
+	if !hasNext {
+		b.missingMember(v.Pos, "the default clause requires next")
+	}
+	return d
+}
+
+func (b *binder) bindPassStep(v *Value) *PassStep {
+	s := &PassStep{Pos: v.Pos}
+	var hasNext bool
+	for _, m := range v.Object {
+		b.pushKey(m.Name)
+		switch m.Name {
+		case "action":
+		case "output":
+			s.Output = m.Value
+		case "assign":
+			s.Assign = b.bindAssign(m.Value)
+		case "next":
+			hasNext = true
+			s.Next = b.bindName(m.Value, "next")
+		case "comment":
+			s.Comment = b.bindComment(m.Value)
+		default:
+			b.unknownMember(m, "a Pass Step")
+		}
+		b.pop()
+	}
+	if !hasNext {
+		b.missingMember(v.Pos, "a Pass Step requires next")
+	}
+	return s
+}
+
+func (b *binder) bindSleepStep(v *Value) *SleepStep {
+	s := &SleepStep{Pos: v.Pos}
+	var hasFor, hasUntil, hasNext bool
+	for _, m := range v.Object {
+		b.pushKey(m.Name)
+		switch m.Name {
+		case "action":
+		case "for":
+			hasFor = true
+			if x, ok := b.bindStringOrExpr(m.Value, "for"); ok {
+				s.For = &x
+			}
+		case "until":
+			hasUntil = true
+			if x, ok := b.bindStringOrExpr(m.Value, "until"); ok {
+				s.Until = &x
+			}
+		case "next":
+			hasNext = true
+			s.Next = b.bindName(m.Value, "next")
+		case "comment":
+			s.Comment = b.bindComment(m.Value)
+		default:
+			b.unknownMember(m, "a Sleep Step")
+		}
+		b.pop()
+	}
+	if hasFor == hasUntil {
+		b.errorAt(CodeExclusiveMembers, v.Pos, "a Sleep carries exactly one of for and until")
+	}
+	if !hasNext {
+		b.missingMember(v.Pos, "a Sleep Step requires next")
+	}
+	return s
+}
+
+func (b *binder) bindReturnStep(v *Value) *ReturnStep {
+	s := &ReturnStep{Pos: v.Pos}
+	for _, m := range v.Object {
+		b.pushKey(m.Name)
+		switch m.Name {
+		case "action":
+		case "value":
+			s.Value = m.Value
+		case "comment":
+			s.Comment = b.bindComment(m.Value)
+		default:
+			b.unknownMember(m, "a Return Step")
+		}
+		b.pop()
+	}
+	return s
+}
+
+func (b *binder) bindRaiseStep(v *Value) *RaiseStep {
+	s := &RaiseStep{Pos: v.Pos}
+	for _, m := range v.Object {
+		b.pushKey(m.Name)
+		switch m.Name {
+		case "action":
+		case "result":
+			s.Result = b.bindRaiseResult(m.Value)
+		case "comment":
+			s.Comment = b.bindComment(m.Value)
+		default:
+			b.unknownMember(m, "a Raise Step")
+		}
+		b.pop()
+	}
+	return s
+}
+
+func (b *binder) bindRaiseResult(v *Value) *RaiseResult {
+	if v.Kind != KindObject {
+		b.errorAt(CodeWrongType, v.Pos, "result must be an object, not %s", v.Kind)
+		return nil
+	}
+	r := &RaiseResult{Pos: v.Pos}
+	var hasCode bool
+	for _, m := range v.Object {
+		b.pushKey(m.Name)
+		switch m.Name {
+		case "type":
+			if x, ok := b.bindStringOrExpr(m.Value, "type"); ok {
+				if x.Literal != nil && *x.Literal == ResultTypeSuccess {
+					b.errorAt(CodeInvalidValue, m.Value.Pos, "type must be a non-success Result type")
+				}
+				r.Type = &x
+			}
+		case "code":
+			hasCode = true
+			if x, ok := b.bindStringOrExpr(m.Value, "code"); ok {
+				r.Code = x
+			}
+		case "message":
+			if x, ok := b.bindStringOrExpr(m.Value, "message"); ok {
+				r.Message = &x
+			}
+		case "details":
+			r.Details = m.Value
+		case "retryable":
+			r.Retryable = b.bindRetryable(m.Value)
+		case "previous":
+			r.Previous = b.bindPrevious(m.Value)
+		default:
+			b.unknownMember(m, "a Raise result")
+		}
+		b.pop()
+	}
+	if !hasCode {
+		b.missingMember(v.Pos, "a Raise result requires code")
+	}
+	return r
+}
+
+// Calls -------------------------------------------------------------------
+
+func (b *binder) bindCall(v *Value) *Call {
+	if v.Kind != KindObject {
+		b.errorAt(CodeWrongType, v.Pos, "a call must be an object, not %s", v.Kind)
+		return nil
+	}
+	c := &Call{Pos: v.Pos}
+	var hasProvider, hasFlow bool
+	for _, m := range v.Object {
+		b.pushKey(m.Name)
+		switch m.Name {
+		case "provider":
+			hasProvider = true
+			c.Provider = b.bindProviderRef(m.Value, "call")
+		case "flow":
+			hasFlow = true
+			c.Flow = b.bindFlowTarget(m.Value)
+		case "input":
+			c.Input = m.Value
+		case "with":
+			c.With = b.bindWith(m.Value)
+		case "onSuccess":
+			c.OnSuccess = b.bindSuccessArm(m.Value)
+		case "onFailure":
+			c.OnFailure = b.bindFailureArm(m.Value)
+		case "comment":
+			c.Comment = b.bindComment(m.Value)
+		default:
+			b.unknownMember(m, "a call object")
+		}
+		b.pop()
+	}
+	if hasProvider == hasFlow {
+		b.errorAt(CodeExclusiveMembers, v.Pos,
+			"a call names exactly one target: provider or flow")
+	}
+	return c
+}
+
+func (b *binder) bindFlowTarget(v *Value) *FlowTarget {
+	switch v.Kind {
+	case KindString:
+		if _, isExpr := ExprBody(v.Str); isExpr {
+			b.errorAt(CodeExpressionNotPermitted, v.Pos,
+				"flow is structural and does not accept an expression")
+			return nil
+		}
+		return &FlowTarget{Name: &Name{Value: v.Str, Pos: v.Pos}}
+	case KindObject:
+		if fl := b.bindFlow(v, false); fl != nil {
+			return &FlowTarget{Inline: fl}
+		}
+		return nil
+	default:
+		b.errorAt(CodeWrongType, v.Pos, "flow must be a name or a Flow object, not %s", v.Kind)
+		return nil
+	}
+}
+
+func (b *binder) bindProviderRef(v *Value, kind string) *ProviderRef {
+	s, ok := b.requireString(v, "provider")
+	if !ok {
+		return nil
+	}
+	if _, isExpr := ExprBody(s); isExpr {
+		b.errorAt(CodeExpressionNotPermitted, v.Pos,
+			"provider is structural and does not accept an expression")
+		return nil
+	}
+	if !validProviderURI(s, kind) {
+		b.errorAt(CodeInvalidProviderURI, v.Pos,
+			"%q is not a well-formed %s-provider URI; expected mwl:provider.%s/<namespace>/<name>",
+			s, kind, kind)
+		return nil
+	}
+	return &ProviderRef{URI: s, Pos: v.Pos}
+}
+
+func (b *binder) bindSuccessArm(v *Value) *SuccessArm {
+	if v.Kind != KindObject {
+		b.errorAt(CodeWrongType, v.Pos, "onSuccess must be an object, not %s", v.Kind)
+		return nil
+	}
+	a := &SuccessArm{Pos: v.Pos}
+	for _, m := range v.Object {
+		b.pushKey(m.Name)
+		switch m.Name {
+		case "value":
+			a.Value = m.Value
+		case "assign":
+			a.Assign = b.bindAssign(m.Value)
+		default:
+			b.unknownMember(m, "an onSuccess arm")
+		}
+		b.pop()
+	}
+	return a
+}
+
+func (b *binder) bindFailureArm(v *Value) *FailureArm {
+	if v.Kind != KindObject {
+		b.errorAt(CodeWrongType, v.Pos, "onFailure must be an object, not %s", v.Kind)
+		return nil
+	}
+	a := &FailureArm{Pos: v.Pos}
+	for _, m := range v.Object {
+		b.pushKey(m.Name)
+		switch m.Name {
+		case "assign":
+			a.Assign = b.bindAssign(m.Value)
+		default:
+			b.unknownMember(m, "an onFailure arm")
+		}
+		b.pop()
+	}
+	return a
+}
+
+// Catch -------------------------------------------------------------------
+
+func (b *binder) bindCatch(v *Value) []CatchClause {
+	if v.Kind != KindArray {
+		b.errorAt(CodeWrongType, v.Pos, "catch must be an array of clauses, not %s", v.Kind)
+		return nil
+	}
+	var clauses []CatchClause
+	for i, e := range v.Array {
+		b.pushIdx(i)
+		if c, ok := b.bindCatchClause(e); ok {
+			clauses = append(clauses, c)
+		}
+		b.pop()
+	}
+	return clauses
+}
+
+func (b *binder) bindCatchClause(v *Value) (CatchClause, bool) {
+	if v.Kind != KindObject {
+		b.errorAt(CodeWrongType, v.Pos, "a catch clause must be an object, not %s", v.Kind)
+		return CatchClause{}, false
+	}
+	c := CatchClause{Pos: v.Pos}
+	var hasMatch, hasNext bool
+	for _, m := range v.Object {
+		b.pushKey(m.Name)
+		switch m.Name {
+		case "match":
+			hasMatch = true
+			c.Match = b.bindMatcher(m.Value)
+		case "output":
+			c.Output = m.Value
+		case "assign":
+			c.Assign = b.bindAssign(m.Value)
+		case "next":
+			hasNext = true
+			c.Next = b.bindName(m.Value, "next")
+		case "comment":
+			c.Comment = b.bindComment(m.Value)
+		default:
+			b.unknownMember(m, "a catch clause")
+		}
+		b.pop()
+	}
+	if !hasMatch {
+		b.missingMember(v.Pos, "a catch clause requires match")
+	}
+	if !hasNext {
+		b.missingMember(v.Pos, "a catch clause requires next")
+	}
+	return c, true
+}
+
+func (b *binder) bindMatcher(v *Value) FailureMatcher {
+	if v.Kind != KindObject {
+		b.errorAt(CodeWrongType, v.Pos, "a failure matcher must be an object, not %s", v.Kind)
+		return FailureMatcher{}
+	}
+	f := FailureMatcher{Pos: v.Pos}
+	var known bool
+	for _, m := range v.Object {
+		b.pushKey(m.Name)
+		switch m.Name {
+		case "codes":
+			known = true
+			f.Codes = b.bindMatcherList(m.Value, "codes", false)
+		case "types":
+			known = true
+			f.Types = b.bindMatcherList(m.Value, "types", true)
+		case "retryable":
+			known = true
+			if m.Value.Kind != KindBool {
+				b.errorAt(CodeWrongType, m.Value.Pos,
+					"matcher retryable must be a literal boolean, not %s", m.Value.Kind)
+			} else {
+				lit := m.Value.Bool
+				f.Retryable = &lit
+			}
+		default:
+			b.unknownMember(m, "a failure matcher")
+		}
+		b.pop()
+	}
+	if !known {
+		b.errorAt(CodeInvalidValue, v.Pos, "a failure matcher must have at least one member")
+	}
+	return f
+}
+
+func (b *binder) bindMatcherList(v *Value, what string, rejectSuccess bool) []StringLit {
+	if v.Kind != KindArray {
+		b.errorAt(CodeWrongType, v.Pos, "%s must be an array of strings, not %s", what, v.Kind)
+		return nil
+	}
+	if len(v.Array) == 0 {
+		b.errorAt(CodeInvalidValue, v.Pos, "%s must be a non-empty array", what)
+		return nil
+	}
+	var list []StringLit
+	for i, e := range v.Array {
+		b.pushIdx(i)
+		if s, ok := b.requireString(e, what+" entry"); ok {
+			if rejectSuccess && s == ResultTypeSuccess {
+				b.errorAt(CodeInvalidValue, e.Pos,
+					`"success" is not a permissible matcher type; a matcher selects among failures`)
+			}
+			list = append(list, StringLit{Value: s, Pos: e.Pos})
+		}
+		b.pop()
+	}
+	return list
+}
+
+// Middleware --------------------------------------------------------------
+
+func (b *binder) bindMiddlewareStack(v *Value) []MiddlewareEntry {
+	if v.Kind != KindArray {
+		b.errorAt(CodeWrongType, v.Pos, "middleware must be an array of entries, not %s", v.Kind)
+		return nil
+	}
+	var entries []MiddlewareEntry
+	for i, e := range v.Array {
+		b.pushIdx(i)
+		if entry, ok := b.bindMiddlewareEntry(e); ok {
+			entries = append(entries, entry)
+		}
+		b.pop()
+	}
+	return entries
+}
+
+func (b *binder) bindMiddlewareEntry(v *Value) (MiddlewareEntry, bool) {
+	if v.Kind != KindObject {
+		b.errorAt(CodeWrongType, v.Pos, "a middleware entry must be an object, not %s", v.Kind)
+		return MiddlewareEntry{}, false
+	}
+	e := MiddlewareEntry{Pos: v.Pos}
+	var hasProvider bool
+	for _, m := range v.Object {
+		b.pushKey(m.Name)
+		switch m.Name {
+		case "provider":
+			hasProvider = true
+			if ref := b.bindProviderRef(m.Value, "middleware"); ref != nil {
+				e.Provider = *ref
+			}
+		case "onEntry":
+			e.OnEntry = b.bindPhaseOnEntry(m.Value)
+		case "onSuccess":
+			e.OnSuccess = b.bindPhaseOnSuccess(m.Value)
+		case "onFailure":
+			e.OnFailure = b.bindPhaseOnFailure(m.Value)
+		case "onAlways":
+			e.OnAlways = b.bindPhaseOnAlways(m.Value)
+		case "comment":
+			e.Comment = b.bindComment(m.Value)
+		default:
+			b.unknownMember(m, "a middleware entry")
+		}
+		b.pop()
+	}
+	if !hasProvider {
+		b.missingMember(v.Pos, "a middleware entry requires provider")
+	}
+	return e, true
+}
+
+func (b *binder) bindPhaseOnEntry(v *Value) *PhaseOnEntry {
+	if v.Kind != KindObject {
+		b.errorAt(CodeWrongType, v.Pos, "onEntry must be an object, not %s", v.Kind)
+		return nil
+	}
+	p := &PhaseOnEntry{Pos: v.Pos}
+	for _, m := range v.Object {
+		b.pushKey(m.Name)
+		switch m.Name {
+		case "when":
+			p.When = b.bindBoolOrExpr(m.Value, "when")
+		case "with":
+			p.With = b.bindWith(m.Value)
+		case "assign":
+			p.Assign = b.bindAssign(m.Value)
+		case "output":
+			p.Output = m.Value
+		default:
+			b.unknownMember(m, "an onEntry phase")
+		}
+		b.pop()
+	}
+	return p
+}
+
+func (b *binder) bindPhaseOnSuccess(v *Value) *PhaseOnSuccess {
+	if v.Kind != KindObject {
+		b.errorAt(CodeWrongType, v.Pos, "onSuccess must be an object, not %s", v.Kind)
+		return nil
+	}
+	p := &PhaseOnSuccess{Pos: v.Pos}
+	for _, m := range v.Object {
+		b.pushKey(m.Name)
+		switch m.Name {
+		case "when":
+			p.When = b.bindBoolOrExpr(m.Value, "when")
+		case "with":
+			p.With = b.bindWith(m.Value)
+		case "assign":
+			p.Assign = b.bindAssign(m.Value)
+		case "value":
+			p.Value = m.Value
+		default:
+			b.unknownMember(m, "an onSuccess phase")
+		}
+		b.pop()
+	}
+	return p
+}
+
+func (b *binder) bindPhaseOnFailure(v *Value) *PhaseOnFailure {
+	if v.Kind != KindObject {
+		b.errorAt(CodeWrongType, v.Pos, "onFailure must be an object, not %s", v.Kind)
+		return nil
+	}
+	p := &PhaseOnFailure{Pos: v.Pos}
+	for _, m := range v.Object {
+		b.pushKey(m.Name)
+		switch m.Name {
+		case "when":
+			p.When = b.bindBoolOrExpr(m.Value, "when")
+		case "with":
+			p.With = b.bindWith(m.Value)
+		case "assign":
+			p.Assign = b.bindAssign(m.Value)
+		case "type":
+			if x, ok := b.bindStringOrExpr(m.Value, "type"); ok {
+				if x.Literal != nil && *x.Literal == ResultTypeSuccess {
+					b.errorAt(CodeInvalidValue, m.Value.Pos, "type must be a non-success Result type")
+				}
+				p.Type = &x
+			}
+		case "code":
+			if x, ok := b.bindStringOrExpr(m.Value, "code"); ok {
+				p.Code = &x
+			}
+		case "message":
+			if x, ok := b.bindStringOrExpr(m.Value, "message"); ok {
+				p.Message = &x
+			}
+		case "details":
+			p.Details = m.Value
+		case "retryable":
+			p.Retryable = b.bindRetryable(m.Value)
+		case "previous":
+			p.Previous = b.bindPrevious(m.Value)
+		default:
+			b.unknownMember(m, "an onFailure phase")
+		}
+		b.pop()
+	}
+	return p
+}
+
+func (b *binder) bindPhaseOnAlways(v *Value) *PhaseOnAlways {
+	if v.Kind != KindObject {
+		b.errorAt(CodeWrongType, v.Pos, "onAlways must be an object, not %s", v.Kind)
+		return nil
+	}
+	p := &PhaseOnAlways{Pos: v.Pos}
+	for _, m := range v.Object {
+		b.pushKey(m.Name)
+		switch m.Name {
+		case "when":
+			p.When = b.bindBoolOrExpr(m.Value, "when")
+		case "with":
+			p.With = b.bindWith(m.Value)
+		case "assign":
+			p.Assign = b.bindAssign(m.Value)
+		default:
+			b.unknownMember(m, "an onAlways phase")
+		}
+		b.pop()
+	}
+	return p
+}

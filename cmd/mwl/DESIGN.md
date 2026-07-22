@@ -75,8 +75,8 @@ layer. Naming today's command `parse` keeps `validate` free for that layer.
 
 The document kind is a subcommand rather than a flag or sniffed content: the two
 kinds have different schemas, different entry points, and a caller always knows
-which one it holds. `parse provider` ships when the parser grows
-`ParseProvider`; the surface is designed for both from the start.
+which one it holds. Both kinds run through one runner parameterized by the entry
+point; the streams, flags, and exit codes are identical across them.
 
 The positional argument is a file path, or `-` for stdin, so the tool composes
 in pipelines (`git show HEAD:flow.json | mwl parse flow -`). The parser takes
@@ -286,9 +286,9 @@ rival the flow schema) is premature for a shape marked unstable:
 ## Deferred features
 
 - **Control-flow outline** (`--graph`): a colored, tree-connector rendering of
-  the step graph was designed in full and deferred—the JSON envelope already
-  carries everything it would show, and the rendering code is a real maintenance
-  surface. It returns if actual usage keeps asking for it.
+  the step graph—the JSON envelope already carries everything it would show, and
+  the rendering code is a real maintenance surface. It arrives if actual usage
+  keeps asking for it.
 - **MWL re-emission**: serializing the AST back to a definition document—the
   true round trip, and the seed of a formatter. Kept out of `parse`; byte
   fidelity is a non-goal the parser's design already declares, so this arrives
@@ -298,5 +298,3 @@ rival the flow schema) is premature for a shape marked unstable:
 - **Diagnostics-only JSON**: a flag emitting just the diagnostics array.
   `--ast | jq .diagnostics` covers the need today; the flag is cheap to add if a
   consumer objects to paying for the AST.
-- **`parse provider`**: designed into the surface, wired when the parser grows
-  `ParseProvider`.

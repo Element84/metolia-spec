@@ -1,5 +1,5 @@
 {
-  "filename": "testdata/gather-scatter.json",
+  "filename": "testdata/flow/gather-scatter.json",
   "ast": {
     "$schema": "https://mwl.dev/v0.1/flow/schema.json",
     "comment": "Conformance 401: scatter fan-out preserving calls order, with an inline-flow target.",

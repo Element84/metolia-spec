@@ -1,8 +1,9 @@
 # mwl
 
-The command-line tool for the Metolia Workflow Language. It parses a workflow
-definition and reports diagnostics, optionally emitting the parsed AST as JSON.
-The decisions behind the surface are recorded in [DESIGN.md](DESIGN.md).
+The command-line tool for the Metolia Workflow Language. It parses a workflow or
+provider definition and reports diagnostics, optionally emitting the parsed AST
+as JSON. The decisions behind the surface are recorded in
+[DESIGN.md](DESIGN.md).
 
 ## Install
 
@@ -20,6 +21,8 @@ mwl parse flow flow.json                     # check that a document parses
 git show HEAD:flow.json | mwl parse flow -   # "-" reads stdin
 mwl parse flow flow.json --ast | jq .ast     # emit the parsed AST as JSON
 mwl parse flow flow.json --strict            # exit 1 on warnings too
+mwl parse provider mock.v1.json              # same surface for a provider
+                                             # definition
 ```
 
 Diagnostics print to stderr as `file:line:col: severity: message [code]`; a

@@ -58,6 +58,15 @@ the reasoning from the code.
     `ParseFlow` and `ParseProvider` in package `parser` take source bytes and do
     no file I/O; a filename is an optional diagnostic label supplied by
     functional option.
+15. [Closed string sets are published as constants](#closed-string-sets-are-published-as-constants)
+    — a value set that survives into the AST as string data gets exported
+    plain-string constants, shared with the bind pass; a set the AST encodes as
+    types gets none.
+16. [The typed AST normalizes empty spellings](#the-typed-ast-normalizes-empty-spellings)
+    — a spelling that contributes no value (an explicit null documented as
+    equivalent to absence, an empty optional collection) binds identically to an
+    absent field; re-emission from the typed AST is canonical, and syntactic
+    fidelity is the decode tree's to provide.
 
 ## Monorepo with a Go workspace
 
@@ -229,7 +238,9 @@ identically on every run.
 
 Order fidelity also keeps re-serialization useful without promising byte
 fidelity. A tool that reads a definition, edits it mechanically, and writes it
-back can emit the same values in the same order, so the diff is the edit;
+back can emit the same values in the same order, so the diff is the edit, up to
+canonicalization of empty spellings (see
+[The typed AST normalizes empty spellings](#the-typed-ast-normalizes-empty-spellings));
 indentation and other lexical choices are a formatter's concern and a non-goal
 here. The spec's round-trip obligation, that `comment` values survive a read and
 rewrite, is met by modeling `comment` on every structure that accepts it.
@@ -305,11 +316,11 @@ but module graph pruning keeps it out of consumers' builds.
 The differential test is also the parser-side drift check. The repository
 already requires every normative spec change to land with schema and fixture
 updates, so a change that reaches the schema and fixtures but not the parser
-fails the parser's suite on the next run. Embedding the schema bytes with
-`go:embed` was considered and dropped: with no engine in the parse path,
-embedded bytes have nothing to check against at runtime, and behavioral
-agreement over the corpus is a stronger guarantee than byte identity of copies.
-The schemas are read from the repository tree as test inputs.
+fails the parser's suite on the next run. The alternative, embedding the schema
+bytes with `go:embed`, is rejected: with no engine in the parse path, embedded
+bytes have nothing to check against at runtime, and behavioral agreement over
+the corpus is a stronger guarantee than byte identity of copies. The schemas are
+read from the repository tree as test inputs.
 
 ## Diagnostics are collected, with severities
 
@@ -366,3 +377,64 @@ a functional option (`parser.WithFilename("flow.json")`) rather than a
 positional parameter, so callers without a file do not pass an empty
 placeholder. The options form also lets future knobs join without breaking the
 signature.
+
+## Closed string sets are published as constants
+
+Several fields carry values drawn from a fixed vocabulary: a phase action's
+`kind`, a middleware provider's attachment levels, the spec-defined Result
+types. Consumers compare against these values — a linter dispatching on an
+action kind, a validator inspecting matcher types — and a comparison against a
+mistyped literal fails silently. The package therefore exports each such
+vocabulary as constants (`ActionKindControl = "control"`), turning the typo into
+a compile error at the consumer's site.
+
+The rule draws the boundary: a closed set is published when its values survive
+into the AST as string data, and not when the AST encodes the set as types. The
+Step `action` values get no constants because no consumer ever holds one as a
+string — the discriminator becomes the variant struct, and a type switch already
+gives the compiler something to check. A constant with no comparison site
+protects nothing.
+
+Two properties keep the constants honest. The bind pass validates against the
+same identifiers it publishes, so the enforced set and the published set cannot
+drift. And they are plain untyped constants, not a defined string type: Go's
+defined types do not close a value set (any string constant converts), so a
+`type ActionKind string` would promise a check the compiler does not perform,
+while untyped constants compare against `StringLit.Value` without conversion.
+Where a vocabulary is open — extension Result types are legal beyond the
+spec-defined five — the constants are published vocabulary for comparison, not a
+membership check, and the bind pass does not enforce membership.
+
+## The typed AST normalizes empty spellings
+
+JSON offers more than one spelling of "nothing here": an optional member can be
+absent, an empty collection (`"catch": []`), or an explicit null the data model
+documents as equivalent to absence (`"concurrency": null`). The typed AST
+records meaning, so these spellings bind identically: a member whose spelling
+contributes no value is indistinguishable from an absent one. The line is
+content, not syntax. An authored value always survives, even when it restates a
+default — `"wait": true` is a value, and `Completion.Wait` keeps it — and an
+explicit null that means something different from absence (`retryable`,
+`previous`) is likewise a value, carried by its pair type. Only the spellings of
+nothing collapse: `concurrency` carries a cap value or nothing at all.
+
+Two consequences follow. Re-emission from the typed AST is canonical: a tool
+that reads a definition and writes it back emits one spelling of nothing —
+absence — the way gofmt emits one spelling of a program, and decision 8's
+round-trip promise reads accordingly: "the same values in the same order" means
+semantic values, and an edit tool's diff may additionally canonicalize an empty
+spelling the author wrote. And the preservation machinery the rule forecloses
+stays unbuilt: distinguishing written-empty from absent would put presence
+machinery (a pointer-to-slice, a wrapper struct) on every optional collection,
+taxing every consumer of the AST for a distinction none of them read. Go's own
+nil-versus-empty slice distinction is not that machinery: it is invisible to
+consumers, silently destroyed by ordinary operations, and no test would hold it.
+
+The consumer that genuinely wants spelling fidelity is a formatter, or any
+rewrite tool whose diff must be exactly its edit — and what such a tool needs is
+member-level syntax the typed AST rightly discards: presence, document order,
+the number lexeme as written, positions into the source. That layer already
+exists as the decode pass's positioned value tree, where `"catch": []` is simply
+a member holding an empty array. The tree is unexported today; when a
+syntax-level tool becomes real, exporting it is the API addition, and the typed
+AST stays a purely semantic model rather than becoming a partial syntactic one.

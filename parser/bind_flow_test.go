@@ -119,7 +119,7 @@ func TestBindCoverageFixture(t *testing.T) {
 	if g.Calls[2].Flow == nil || g.Calls[2].Flow.Inline == nil {
 		t.Errorf("third scatter call should be an inline flow target")
 	}
-	if g.Concurrency == nil || g.Concurrency.Value == nil || *g.Concurrency.Value != 2 {
+	if g.Concurrency == nil || g.Concurrency.Value != 2 {
 		t.Errorf("concurrency = %+v, want 2", g.Concurrency)
 	}
 	if g.Completion == nil || g.Completion.Successes.Expr == nil {
@@ -476,7 +476,7 @@ func TestBindDiagnostics(t *testing.T) {
 	}
 }
 
-func TestBindConcurrencyNullPreserved(t *testing.T) {
+func TestBindConcurrencyNullBindsAsAbsent(t *testing.T) {
 	src := flowDoc(`{"a": {"action": "Gather", "calls": [{"provider": "mwl:provider.call/x/y"}], "concurrency": null, "next": "done"}, "done": {"action": "Return"}}`)
 	f, diags := bindSrc(t, src)
 	if len(diags) != 0 {
@@ -484,11 +484,8 @@ func TestBindConcurrencyNullPreserved(t *testing.T) {
 	}
 	ns, _ := f.StepByName("a")
 	g := ns.Step.(*GatherStep)
-	if g.Concurrency == nil {
-		t.Fatal("explicit null concurrency should be preserved as a present field")
-	}
-	if g.Concurrency.Value != nil {
-		t.Errorf("explicit null concurrency should carry a nil Value, got %v", *g.Concurrency.Value)
+	if g.Concurrency != nil {
+		t.Errorf("concurrency = %+v; an explicit null is an empty spelling and binds as absent", g.Concurrency)
 	}
 }
 
