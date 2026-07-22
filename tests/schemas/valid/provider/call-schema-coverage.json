@@ -1,0 +1,23 @@
+{
+  "$schema": "https://mwl.dev/v0.1/provider/schema.json",
+  "uri": "mwl:provider.call/example/object_store.s3/get-object/v1.2",
+  "codePrefix": "ObjectStore2",
+  "description": "Schema-coverage fixture: a call provider exercising the branches the spec-defined providers leave unused. No metadata schema; a URI of more than three path segments using the full segment charset; a catalog with several closed codes and a non-wildcard open sub-prefix.",
+  "parameters": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["bucket", "key"],
+    "properties": {
+      "bucket": { "type": "string", "description": "The bucket to read from." },
+      "key": { "type": "string", "description": "The object key." },
+      "range": { "type": "string", "description": "An optional byte range." }
+    }
+  },
+  "failureCatalog": {
+    "closed": [
+      "Provider.Call.ObjectStore2.NotFound",
+      "Provider.Call.ObjectStore2.AccessDenied"
+    ],
+    "open": ["Provider.Call.ObjectStore2.Backend.*"]
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "$schema": "https://mwl.dev/v0.1/provider/schema.json",
+  "uri": "mwl:provider.call/example",
+  "codePrefix": "Echo",
+  "description": "Invalid: the URI has one path segment after the type; at least a namespace and a name are required.",
+  "parameters": { "type": "object" },
+  "failureCatalog": { "closed": [], "open": [] }
+}

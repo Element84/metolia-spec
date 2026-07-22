@@ -1,0 +1,68 @@
+{
+  "$schema": "https://mwl.dev/v0.1/provider/schema.json",
+  "uri": "mwl:provider.middleware/example/coverage/v1",
+  "codePrefix": "Coverage",
+  "description": "Schema-coverage fixture: a middleware provider exercising the branches the spec-defined providers leave unused. A single-level attachment; all four phases declared; a transform action; a phase carrying both a parameter schema and a structural list.",
+  "attachment": ["flow"],
+  "phases": {
+    "onEntry": {
+      "action": {
+        "kind": "side-effect",
+        "description": "Records entry."
+      }
+    },
+    "onSuccess": {
+      "action": {
+        "kind": "transform",
+        "description": "Reshapes the rising success value."
+      },
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "shape": {
+            "type": "object",
+            "description": "The reshape template, taken structurally."
+          }
+        }
+      },
+      "structural": ["shape"]
+    },
+    "onFailure": {
+      "action": {
+        "kind": "control",
+        "description": "May substitute a success for a matching failure.",
+        "acceptance": "The rising failure is committed once the phase's action declines it."
+      },
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "substitute": {
+            "description": "The value of the substituted success Result."
+          }
+        }
+      }
+    },
+    "onAlways": {
+      "action": {
+        "kind": "side-effect",
+        "description": "Records exit."
+      }
+    }
+  },
+  "metadata": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "entered": {
+        "type": "boolean",
+        "description": "Whether the entry has run."
+      }
+    }
+  },
+  "failureCatalog": {
+    "closed": ["Provider.Middleware.Coverage.SubstituteInvalid"],
+    "open": ["Provider.Middleware.Coverage.Hooks.*"]
+  }
+}

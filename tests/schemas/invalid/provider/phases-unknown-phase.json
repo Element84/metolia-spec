@@ -1,0 +1,13 @@
+{
+  "$schema": "https://mwl.dev/v0.1/provider/schema.json",
+  "uri": "mwl:provider.middleware/example/trace/v1",
+  "codePrefix": "Trace",
+  "description": "Invalid: phases names a phase outside the four phases of the phase model (onEntry, onSuccess, onFailure, onAlways).",
+  "attachment": ["step"],
+  "phases": {
+    "onExit": {
+      "action": { "kind": "side-effect", "description": "Records exit." }
+    }
+  },
+  "failureCatalog": { "closed": [], "open": [] }
+}

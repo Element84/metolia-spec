@@ -1,0 +1,7 @@
+{
+  "uri": "mwl:provider.call/example/echo/v1",
+  "codePrefix": "Echo",
+  "description": "Invalid: the $schema member is absent.",
+  "parameters": { "type": "object" },
+  "failureCatalog": { "closed": [], "open": [] }
+}

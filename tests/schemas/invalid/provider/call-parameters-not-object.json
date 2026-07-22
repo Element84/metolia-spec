@@ -1,0 +1,8 @@
+{
+  "$schema": "https://mwl.dev/v0.1/provider/schema.json",
+  "uri": "mwl:provider.call/example/echo/v1",
+  "codePrefix": "Echo",
+  "description": "Invalid: the parameters schema does not describe an object at its top level.",
+  "parameters": { "type": "string" },
+  "failureCatalog": { "closed": [], "open": [] }
+}
