@@ -6,38 +6,34 @@ package parser
 // subtree from the decode pass directly; their string leaves are
 // classified with ExprBody.
 
-// inline call.flow value. All three carry the same fields; only the root
+// Flow is one workflow definition: the root document, a named subflow, or
+// an inline call.flow value. All three carry the same fields; only the root
 // carries Schema.
 type Flow struct {
 	Pos     Position
 	Comment string
 
-	// Schema is the root document's $schema URI; empty on a named or
-	// inline Flow.
-	Schema     string
-	Entrypoint Name
-	Flows      []NamedFlow
-	Middleware []MiddlewareEntry
-	// Parameters is the Flow's JSON Schema document, held as its raw
-	// positioned subtree. The parser checks only that it is an object
-	// declaring "type": "object"; evaluating it is a consumer's concern.
-	Parameters *Value
-	Steps      []NamedStep
+	Schema     string            // the root document's $schema URI; empty on nested Flows
+	Entrypoint Name              // the step execution enters at
+	Flows      []NamedFlow       // the subflow ledger, document order
+	Middleware []MiddlewareEntry // flow-level stack, wrapping every step
+	Parameters *Value            // JSON Schema for the Flow's named parameters; or nil
+	Steps      []NamedStep       // the step graph, document order
 
-	stepIndex map[string]int
-	flowIndex map[string]int
+	stepIndex map[string]int // name → Steps index, built by bind for StepByName
+	flowIndex map[string]int // name → Flows index, built by bind for FlowByName
 }
 
-// NamedFlow is one flows entry, in document order.
+// NamedFlow is one flows entry.
 type NamedFlow struct {
-	Name    string
+	Name    string // the key the author chose
 	NamePos Position
-	Flow    *Flow
+	Flow    *Flow // the subflow it names
 }
 
-// NamedStep is one steps entry, in document order.
+// NamedStep is one steps entry.
 type NamedStep struct {
-	Name    string
+	Name    string // the step's name, cited by entrypoint and next
 	NamePos Position
 	Step    Step
 }
@@ -83,53 +79,51 @@ type CallStep struct {
 	Pos     Position
 	Comment string
 
-	Call       *Call
-	Input      *Value
-	Output     *Value
-	Assign     []Member
-	Middleware []MiddlewareEntry
-	Catch      []CatchClause
-	Next       Name
+	Call       *Call             // the target, arguments, and arms
+	Input      *Value            // shapes the working value; or nil to pass through
+	Output     *Value            // shapes the emitted value; or nil to pass through
+	Assign     []Member          // captures into vars on successful exit
+	Middleware []MiddlewareEntry // step-level stack around this dispatch
+	Catch      []CatchClause     // failure edges, first match wins
+	Next       Name              // the success edge
 }
 
 // GatherStep fans dispatches out concurrently and gathers the Results back
 // in. It carries exactly one of its two forms: Over with Call (iterate), or
-// Calls (scatter).
+// Calls (scatter). Completion is the only path by which individual dispatch
+// failures affect the step.
 type GatherStep struct {
 	Pos     Position
 	Comment string
 
-	// Over and Call are the iterate form: one dispatch of the Call
-	// template per element of the Over collection.
-	Over *OrExpr[[]*Value]
-	Call *Call
-	// Calls is the scatter form: one dispatch per entry.
-	Calls []*Call
+	Over  *OrExpr[[]*Value] // iterate form: one dispatch of Call per element
+	Call  *Call             // the iterate form's call template
+	Calls []*Call           // scatter form: one dispatch per entry
 
-	Completion *Completion
-	// Concurrency caps the dispatches active at once; nil means no cap:
-	// the field is absent, or an explicit null, which binds identically.
-	Concurrency *ConcurrencyCap
-	Output      *Value
-	Assign      []Member
-	Catch       []CatchClause
-	Next        Name
+	Completion  *Completion     // success criterion; or nil (every dispatch must succeed)
+	Concurrency *ConcurrencyCap // caps dispatches in flight; or nil (no cap)
+	Output      *Value          // shapes the emitted value; or nil (succeeded values, in order)
+	Assign      []Member        // captures into vars on successful exit
+	Catch       []CatchClause   // failure edges, first match wins
+	Next        Name            // the success edge
 }
 
 // ConcurrencyCap is a Gather's concurrency cap: the cap value and its
-// position. A Gather without a cap carries no ConcurrencyCap at all.
+// position. A Gather without a cap carries no ConcurrencyCap at all: an
+// absent field and an explicit null bind identically.
 type ConcurrencyCap struct {
 	Pos   Position
 	Value int64
 }
 
-// Completion is a Gather's completion policy.
+// Completion is a Gather's completion policy. Successes is evaluated once,
+// after dispatches are enumerated, so the dispatch count is available to
+// the expression.
 type Completion struct {
 	Pos Position
 
-	Successes OrExpr[int64]
-	// Wait is a literal; nil means the default, true.
-	Wait *bool
+	Successes OrExpr[int64] // dispatches that must succeed; 1 means first success wins
+	Wait      *bool         // let pending dispatches finish?; or nil (true)
 }
 
 // MatchStep routes to one of several successors by testing predicates
@@ -138,9 +132,9 @@ type MatchStep struct {
 	Pos     Position
 	Comment string
 
-	Input   *Value
-	Cases   []MatchCase
-	Default MatchDefault
+	Input   *Value       // shapes the value the predicates test; or nil to pass through
+	Cases   []MatchCase  // tried in order, first match wins
+	Default MatchDefault // the required fallback
 }
 
 // MatchCase is one cases clause: a predicate with the routing, shaping, and
@@ -149,14 +143,14 @@ type MatchCase struct {
 	Pos     Position
 	Comment string
 
-	When   Expr
-	Output *Value
-	Assign []Member
-	Next   Name
+	When   Expr     // the predicate; always an expression
+	Output *Value   // shapes the emitted value; or nil (the shaped match input)
+	Assign []Member // captures into vars when selected
+	Next   Name     // the successor this clause routes to
 }
 
-// MatchDefault is the required fallback clause: the case shape without a
-// predicate.
+// MatchDefault is the required fallback clause: a MatchCase, with the same
+// field semantics, minus the predicate.
 type MatchDefault struct {
 	Pos     Position
 	Comment string
@@ -172,9 +166,9 @@ type PassStep struct {
 	Pos     Position
 	Comment string
 
-	Output *Value
-	Assign []Member
-	Next   Name
+	Output *Value   // shapes the emitted value; or nil to pass through
+	Assign []Member // captures into vars
+	Next   Name     // the successor step's name
 }
 
 // SleepStep pauses the frame for a duration or until an instant. Exactly
@@ -183,9 +177,9 @@ type SleepStep struct {
 	Pos     Position
 	Comment string
 
-	For   *OrExpr[string]
-	Until *OrExpr[string]
-	Next  Name
+	For   *OrExpr[string] // an ISO 8601 duration to sleep
+	Until *OrExpr[string] // an RFC 3339 instant to sleep until
+	Next  Name            // the successor step's name
 }
 
 // ReturnStep is the terminal success: the frame completes with a success
@@ -194,7 +188,7 @@ type ReturnStep struct {
 	Pos     Position
 	Comment string
 
-	Value *Value
+	Value *Value // shapes what the Result carries; or nil (the value received)
 }
 
 // RaiseStep is the terminal failure. With a Result, it constructs the
@@ -203,21 +197,21 @@ type RaiseStep struct {
 	Pos     Position
 	Comment string
 
-	Result *RaiseResult
+	Result *RaiseResult // the failure to construct; or nil to re-raise
 }
 
 // RaiseResult holds the authorable fields of a constructed failure
-// envelope. Unset fields are absent from the envelope.
+// envelope. A Raise inherits nothing: unset fields are absent from the
+// envelope.
 type RaiseResult struct {
 	Pos Position
 
-	// Type names the failure Result's type; nil defaults to "error".
-	Type      *OrExpr[string]
-	Code      OrExpr[string]
-	Message   *OrExpr[string]
-	Details   *Value
-	Retryable *RetryableField
-	Previous  *PreviousField
+	Type      *OrExpr[string] // a non-success Result type; or nil ("error")
+	Code      OrExpr[string]  // the failure code; required
+	Message   *OrExpr[string] // the human-readable message
+	Details   *Value          // the structured payload
+	Retryable *RetryableField // bool, explicit null, or expression
+	Previous  *PreviousField  // overrides the failure-chain link
 }
 
 // Call is a call object: a request to run a target and obtain its Result.
@@ -227,13 +221,13 @@ type Call struct {
 	Pos     Position
 	Comment string
 
-	Provider *ProviderRef
-	Flow     *FlowTarget
+	Provider *ProviderRef // the provider target
+	Flow     *FlowTarget  // the flow target
 
-	Input     *Value
-	With      *OrExpr[[]Member]
-	OnSuccess *SuccessArm
-	OnFailure *FailureArm
+	Input     *Value            // the payload sent to the target; or nil to pass through
+	With      *OrExpr[[]Member] // arguments, validated against the target's parameter schema
+	OnSuccess *SuccessArm       // run when the Result settles as success
+	OnFailure *FailureArm       // run on any non-success Result
 }
 
 // ProviderRef is a provider URI as written, checked as a well-formed name
@@ -246,25 +240,27 @@ type ProviderRef struct {
 // FlowTarget is a call's flow target: a named Flow referenced by bare name,
 // or an inline Flow object. Exactly one of Name and Inline is set.
 type FlowTarget struct {
-	Name   *Name
-	Inline *Flow
+	Name   *Name // references a subflow declared in an enclosing flows ledger
+	Inline *Flow // a whole Flow written at the point of use
 }
 
 // SuccessArm is a call's onSuccess arm: shapes the value placed in the
-// Call's success Result and captures variables.
+// Call's success Result and captures variables while the dispatch's context
+// is still alive.
 type SuccessArm struct {
 	Pos Position
 
-	Value  *Value
-	Assign []Member
+	Value  *Value   // reshapes the returned value; or nil to pass through
+	Assign []Member // captures into vars
 }
 
-// FailureArm is a call's onFailure arm: captures variables from the failed
-// dispatch's live context.
+// FailureArm is a call's onFailure arm: capture only, from the failed
+// dispatch's live context — the failure envelope ascends exactly as
+// produced.
 type FailureArm struct {
 	Pos Position
 
-	Assign []Member
+	Assign []Member // captures into vars
 }
 
 // CatchClause is a conditional failure edge: when the Step's failure
@@ -273,10 +269,10 @@ type CatchClause struct {
 	Pos     Position
 	Comment string
 
-	Match  FailureMatcher
-	Output *Value
-	Assign []Member
-	Next   Name
+	Match  FailureMatcher // which failures this clause takes
+	Output *Value         // shapes the handler's value; or nil (the value the step received)
+	Assign []Member       // captures into vars on the handler path
+	Next   Name           // where handling continues
 }
 
 // FailureMatcher selects failures. Each present member constrains one
@@ -285,9 +281,9 @@ type CatchClause struct {
 type FailureMatcher struct {
 	Pos Position
 
-	Codes     []StringLit
-	Types     []StringLit
-	Retryable *bool
+	Codes     []StringLit // code patterns: "Prefix.Code", "Prefix.*", or "*"
+	Types     []StringLit // non-success Result types to accept
+	Retryable *bool       // the envelope's explicit retryable value
 }
 
 // MiddlewareEntry names a middleware by provider URI and configures its
@@ -297,56 +293,60 @@ type MiddlewareEntry struct {
 	Pos     Position
 	Comment string
 
-	Provider  ProviderRef
-	OnEntry   *PhaseOnEntry
-	OnSuccess *PhaseOnSuccess
-	OnFailure *PhaseOnFailure
-	OnAlways  *PhaseOnAlways
+	Provider  ProviderRef     // the middleware provider's URI
+	OnEntry   *PhaseOnEntry   // on the way in
+	OnSuccess *PhaseOnSuccess // on ascent, success
+	OnFailure *PhaseOnFailure // on ascent, failure
+	OnAlways  *PhaseOnAlways  // on every exit
 }
 
-// PhaseOnEntry configures the entry's onEntry phase.
+// PhaseOnEntry configures the entry's onEntry phase, run on the way in.
 type PhaseOnEntry struct {
 	Pos Position
 
-	When   *OrExpr[bool]
-	With   *OrExpr[[]Member]
-	Assign []Member
-	Output *Value
+	When   *OrExpr[bool]     // gates the phase; or nil (always runs)
+	With   *OrExpr[[]Member] // arguments, validated against the phase's contract
+	Assign []Member          // captures against the phase's bindings
+	Output *Value            // shapes the value passed inward; or nil to pass through
 }
 
-// PhaseOnSuccess configures the entry's onSuccess phase.
+// PhaseOnSuccess configures the entry's onSuccess phase, run as a success
+// Result ascends.
 type PhaseOnSuccess struct {
 	Pos Position
 
-	When   *OrExpr[bool]
-	With   *OrExpr[[]Member]
-	Assign []Member
-	Value  *Value
+	When   *OrExpr[bool]     // gates the phase; or nil (always runs)
+	With   *OrExpr[[]Member] // arguments, validated against the phase's contract
+	Assign []Member          // captures against the phase's bindings
+	Value  *Value            // reshapes the value emitted upward; or nil to pass through
 }
 
-// PhaseOnFailure configures the entry's onFailure phase. Writing any
-// envelope field constructs a new failure superseding the rising one.
+// PhaseOnFailure configures the entry's onFailure phase, run as a failure
+// Result ascends. The envelope fields carry the RaiseResult shapes;
+// writing any of them constructs a new failure superseding the rising one:
+// unwritten fields inherit from it, and it is chained as previous.
 type PhaseOnFailure struct {
 	Pos Position
 
-	When   *OrExpr[bool]
-	With   *OrExpr[[]Member]
-	Assign []Member
+	When   *OrExpr[bool]     // gates the phase; or nil (always runs)
+	With   *OrExpr[[]Member] // arguments, validated against the phase's contract
+	Assign []Member          // captures against the phase's bindings
 
-	Type      *OrExpr[string]
-	Code      *OrExpr[string]
-	Message   *OrExpr[string]
-	Details   *Value
-	Retryable *RetryableField
-	Previous  *PreviousField
+	Type      *OrExpr[string] // a non-success Result type
+	Code      *OrExpr[string] // the failure code
+	Message   *OrExpr[string] // the human-readable message
+	Details   *Value          // the structured payload
+	Retryable *RetryableField // bool, explicit null, or expression
+	Previous  *PreviousField  // overrides the failure-chain link
 }
 
-// PhaseOnAlways configures the entry's onAlways phase, which passes the
-// rising Result through unchanged.
+// PhaseOnAlways configures the entry's onAlways phase: cleanup run on every
+// exit, even when the entry's other phases failed. It has no shaping key;
+// the rising Result passes through unchanged.
 type PhaseOnAlways struct {
 	Pos Position
 
-	When   *OrExpr[bool]
-	With   *OrExpr[[]Member]
-	Assign []Member
+	When   *OrExpr[bool]     // gates the phase; or nil (always runs)
+	With   *OrExpr[[]Member] // arguments, validated against the phase's contract
+	Assign []Member          // captures against the phase's bindings
 }

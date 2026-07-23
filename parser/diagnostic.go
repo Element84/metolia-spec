@@ -132,15 +132,10 @@ func (p Position) String() string {
 // Diagnostic is one finding from a parse.
 type Diagnostic struct {
 	Severity Severity
-	// Code is a stable, kebab-case identifier for the kind of finding,
-	// drawn from the Code constants above, which enumerate the full set.
-	Code string
-	Pos  Position
-	// Path locates the finding within the document as a dotted member
-	// path with bracketed array indexes, e.g. "steps.greet.catch[0]".
-	// Empty when no path applies (a syntax error, for instance).
-	Path    string
-	Message string
+	Code     string // the kind of finding, from the Code constants above
+	Pos      Position
+	Path     string // dotted path to the finding, e.g. "steps.greet.catch[0]"; empty when none applies
+	Message  string
 }
 
 func (d Diagnostic) String() string {

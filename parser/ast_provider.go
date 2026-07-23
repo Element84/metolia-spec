@@ -30,34 +30,27 @@ const (
 type Provider struct {
 	Pos Position
 
-	// Schema is the document's $schema URI.
-	Schema      string
-	URI         StringLit
-	CodePrefix  StringLit
-	Description string
-	// Metadata is the provider's metadata schema, held as its raw
-	// positioned subtree; nil when absent.
-	Metadata       *Value
-	FailureCatalog FailureCatalog
+	Schema         string         // the document's $schema URI
+	URI            StringLit      // the provider's own URI
+	CodePrefix     StringLit      // its identity segment in failure codes
+	Description    string         // the human-readable description
+	Metadata       *Value         // the metadata schema; or nil
+	FailureCatalog FailureCatalog // the codes it can emit under its prefix
 
-	Call       *CallProvider
-	Middleware *MiddlewareProvider
+	Call       *CallProvider       // the call-provider arm
+	Middleware *MiddlewareProvider // the middleware-provider arm
 }
 
 // CallProvider carries the fields only a call provider declares.
 type CallProvider struct {
-	// Parameters is the provider's parameter schema, held as its raw
-	// positioned subtree.
-	Parameters *Value
+	Parameters *Value // the schema a call's with is validated against
 }
 
 // MiddlewareProvider carries the fields only a middleware provider
 // declares.
 type MiddlewareProvider struct {
-	// Attachment lists the levels the middleware may attach at: "step",
-	// "flow", or both, each at most once.
-	Attachment []StringLit
-	Phases     PhaseContracts
+	Attachment []StringLit    // "step", "flow", or both, each at most once
+	Phases     PhaseContracts // the per-phase contract
 }
 
 // PhaseContracts is a middleware provider's per-phase contract. A nil phase
@@ -75,32 +68,24 @@ type PhaseContracts struct {
 type PhaseContract struct {
 	Pos Position
 
-	Action PhaseAction
-	// Parameters is the schema the phase's with is validated against,
-	// held as its raw positioned subtree; nil when absent.
-	Parameters *Value
-	// Structural names the parameters taken structurally.
-	Structural []StringLit
+	Action     PhaseAction // the action the phase declares
+	Parameters *Value      // the schema the phase's with is validated against; or nil
+	Structural []StringLit // names of the parameters taken structurally
 }
 
 // PhaseAction is the action a phase declares.
 type PhaseAction struct {
 	Pos Position
 
-	// Kind is one of the ActionKind values.
-	Kind        StringLit
-	Description string
-	// Acceptance is the commit point of a control action that races the
-	// operation it wraps; empty when absent.
-	Acceptance string
+	Kind        StringLit // one of the ActionKind values
+	Description string    // the human-readable description
+	Acceptance  string    // a control action's commit point; empty when absent
 }
 
-// FailureCatalog declares the codes a provider can emit under its prefix:
-// closed codes, declared exactly, and open sub-prefixes, regions where
-// codes not knowable in advance may appear.
+// FailureCatalog declares the codes a provider can emit under its prefix.
 type FailureCatalog struct {
 	Pos Position
 
-	Closed []StringLit
-	Open   []StringLit
+	Closed []StringLit // codes declared exactly
+	Open   []StringLit // sub-prefixes where undeclared codes may appear
 }

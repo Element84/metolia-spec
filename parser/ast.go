@@ -38,7 +38,7 @@ const (
 // surrounding whitespace removed. The parser does not interpret the body;
 // consumers that evaluate or analyze expressions parse it themselves.
 type Expr struct {
-	Body string
+	Body string // the text between the delimiters, whitespace-trimmed
 	Pos  Position
 }
 
@@ -54,16 +54,16 @@ type OrExpr[T any] struct {
 // null (an assertion of "no assertion", distinct from omitting the field),
 // or an expression. Exactly one of Literal, Null, and Expr is set.
 type RetryableField struct {
-	Literal *bool
-	Null    bool
-	Expr    *Expr
+	Literal *bool // set for a boolean literal
+	Null    bool  // set for an explicit JSON null
+	Expr    *Expr // set for an expression
 }
 
 // PreviousField is a previous envelope field: a literal object, an explicit
 // null (severing the failure chain, distinct from omitting the field), or
 // an expression. Exactly one of Literal, Null, and Expr is set.
 type PreviousField struct {
-	Literal *Value
-	Null    bool
-	Expr    *Expr
+	Literal *Value // set for a literal object
+	Null    bool   // set for an explicit JSON null
+	Expr    *Expr  // set for an expression
 }
