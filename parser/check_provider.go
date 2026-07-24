@@ -2,6 +2,12 @@ package parser
 
 import "strings"
 
+// providerChecker is the provider check pass's walker: the shared reporter
+// machinery is all the state it needs.
+type providerChecker struct {
+	reporter
+}
+
 // checkProvider is the provider check pass: the findings that span the
 // document's fields. Both are spec-authorized warnings — the document is
 // legal, but rarely what the author meant. A failure-catalog entry is
@@ -10,7 +16,7 @@ import "strings"
 // its phase's parameters top-level properties. It expects an AST the bind
 // pass produced without errors.
 func checkProvider(p *Provider) Diagnostics {
-	c := &checker{}
+	c := &providerChecker{}
 
 	kind := "Call"
 	if p.Middleware != nil {
@@ -49,7 +55,7 @@ func checkProvider(p *Provider) Diagnostics {
 // space open and is exempt; every other entry reaching this pass carries
 // its kind and codePrefix segments, since malformed entries are bind
 // errors and errors skip the check pass.
-func (c *checker) checkCatalogEntries(p *Provider, kind, member string, entries []StringLit) {
+func (c *providerChecker) checkCatalogEntries(p *Provider, kind, member string, entries []StringLit) {
 	c.pushKey(member)
 	for i, e := range entries {
 		if e.Value == "*" {
@@ -58,7 +64,7 @@ func (c *checker) checkCatalogEntries(p *Provider, kind, member string, entries 
 		segs := strings.Split(e.Value, ".")
 		if segs[1] != kind || segs[2] != p.CodePrefix.Value {
 			c.pushIdx(i)
-			c.report(CodeCatalogOutsidePrefix, e.Pos, renderPath(c.path, ""),
+			c.report(CodeCatalogOutsidePrefix, e.Pos,
 				"%q is outside the provider's own code space, Provider.%s.%s.*",
 				e.Value, kind, p.CodePrefix.Value)
 			c.pop()
@@ -70,7 +76,7 @@ func (c *checker) checkCatalogEntries(p *Provider, kind, member string, entries 
 // checkStructural warns where a structural name matches no key of the
 // phase's parameters top-level properties: the declaration marks nothing,
 // and the member it was meant to mark evaluates as an ordinary with member.
-func (c *checker) checkStructural(ph *PhaseContract) {
+func (c *providerChecker) checkStructural(ph *PhaseContract) {
 	if len(ph.Structural) == 0 {
 		return
 	}
@@ -84,7 +90,7 @@ func (c *checker) checkStructural(ph *PhaseContract) {
 	for i, s := range ph.Structural {
 		if !keys[s.Value] {
 			c.pushIdx(i)
-			c.report(CodeStructuralUnknownParameter, s.Pos, renderPath(c.path, ""),
+			c.report(CodeStructuralUnknownParameter, s.Pos,
 				"structural name %q matches no key of the phase's parameters properties", s.Value)
 			c.pop()
 		}

@@ -7,42 +7,26 @@ import (
 	"strings"
 )
 
-// This file holds the machinery both bind passes share: the binder,
-// which accumulates diagnostics and the document path as it walks the
-// value tree, and the generic field-shape helpers the flow and provider
+// This file holds the machinery both bind passes share: the binder, a
+// reporter carrying the generic field-shape helpers the flow and provider
 // grammars both draw on.
 
 type binder struct {
-	diags Diagnostics
-	path  []pathSeg
-}
-
-func (b *binder) pushKey(name string) { b.path = append(b.path, pathSeg{key: name}) }
-func (b *binder) pushIdx(i int)       { b.path = append(b.path, pathSeg{idx: i, isIdx: true}) }
-func (b *binder) pop()                { b.path = b.path[:len(b.path)-1] }
-
-func (b *binder) errorAt(code string, pos Position, format string, args ...any) {
-	b.diags = append(b.diags, Diagnostic{
-		Severity: severityOf(code),
-		Code:     code,
-		Pos:      pos,
-		Path:     renderPath(b.path, ""),
-		Message:  fmt.Sprintf(format, args...),
-	})
+	reporter
 }
 
 func (b *binder) unknownMember(m Member, in string) {
-	b.errorAt(CodeUnknownMember, m.NamePos, "unknown member %q in %s", m.Name, in)
+	b.report(CodeUnknownMember, m.NamePos, "unknown member %q in %s", m.Name, in)
 }
 
 func (b *binder) missingMember(pos Position, what string) {
-	b.errorAt(CodeMissingMember, pos, "%s", what)
+	b.report(CodeMissingMember, pos, "%s", what)
 }
 
 // requireString reports a wrong-type error unless v is a string.
 func (b *binder) requireString(v *Value, what string) (string, bool) {
 	if v.Kind != KindString {
-		b.errorAt(CodeWrongType, v.Pos, "%s must be a string, not %s", what, v.Kind)
+		b.report(CodeWrongType, v.Pos, "%s must be a string, not %s", what, v.Kind)
 		return "", false
 	}
 	return v.Str, true
@@ -56,7 +40,7 @@ func (b *binder) bindName(v *Value, what string) Name {
 		return Name{Pos: v.Pos}
 	}
 	if _, isExpr := ExprBody(s); isExpr {
-		b.errorAt(CodeExpressionNotPermitted, v.Pos,
+		b.report(CodeExpressionNotPermitted, v.Pos,
 			"%s is structural and does not accept an expression", what)
 	}
 	return Name{Value: s, Pos: v.Pos}
@@ -74,7 +58,7 @@ func (b *binder) bindComment(v *Value) string {
 // retained as-is; the one check is the declared "type": "object".
 func (b *binder) bindObjectSchema(v *Value, what string) *Value {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "%s must be a JSON Schema object, not %s", what, v.Kind)
+		b.report(CodeWrongType, v.Pos, "%s must be a JSON Schema object, not %s", what, v.Kind)
 		return nil
 	}
 	t := v.Field("type")
@@ -82,7 +66,7 @@ func (b *binder) bindObjectSchema(v *Value, what string) *Value {
 	case t == nil:
 		b.missingMember(v.Pos, fmt.Sprintf(`a %s schema must declare "type": "object"`, what))
 	case t.Kind != KindString || t.Str != "object":
-		b.errorAt(CodeInvalidValue, t.Pos, `a %s schema must declare "type": "object"`, what)
+		b.report(CodeInvalidValue, t.Pos, `a %s schema must declare "type": "object"`, what)
 	}
 	return v
 }
@@ -97,6 +81,14 @@ func providerURIKind(uri string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// invalidProviderURI reports a URI that is not a well-formed name of the
+// given kind; the message is shared by every site that checks one.
+func (b *binder) invalidProviderURI(pos Position, uri, kind string) {
+	b.report(CodeInvalidProviderURI, pos,
+		"%q is not a well-formed %s-provider URI; expected mwl:provider.%s/<namespace>/<name>",
+		uri, kind, kind)
 }
 
 // validProviderURI reports whether uri is a well-formed provider URI of the
@@ -132,7 +124,7 @@ func validProviderURI(uri, kind string) bool {
 
 func (b *binder) bindAssign(v *Value) []Member {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "assign must be an object, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "assign must be an object, not %s", v.Kind)
 		return nil
 	}
 	return v.Object
@@ -147,9 +139,9 @@ func (b *binder) bindWith(v *Value) *OrExpr[[]Member] {
 		if body, ok := ExprBody(v.Str); ok {
 			return &OrExpr[[]Member]{Expr: &Expr{Body: body, Pos: v.Pos}}
 		}
-		b.errorAt(CodeWrongType, v.Pos, "with must be an object or an expression")
+		b.report(CodeWrongType, v.Pos, "with must be an object or an expression")
 	default:
-		b.errorAt(CodeWrongType, v.Pos, "with must be an object or an expression, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "with must be an object or an expression, not %s", v.Kind)
 	}
 	return nil
 }
@@ -163,7 +155,7 @@ func (b *binder) bindExpr(v *Value, what string) *Expr {
 	}
 	body, isExpr := ExprBody(s)
 	if !isExpr {
-		b.errorAt(CodeInvalidValue, v.Pos, "%s must be an expression", what)
+		b.report(CodeInvalidValue, v.Pos, "%s must be an expression", what)
 		return nil
 	}
 	return &Expr{Body: body, Pos: v.Pos}
@@ -178,9 +170,9 @@ func (b *binder) bindBoolOrExpr(v *Value, what string) *OrExpr[bool] {
 		if body, ok := ExprBody(v.Str); ok {
 			return &OrExpr[bool]{Expr: &Expr{Body: body, Pos: v.Pos}}
 		}
-		b.errorAt(CodeWrongType, v.Pos, "%s must be a boolean or an expression", what)
+		b.report(CodeWrongType, v.Pos, "%s must be a boolean or an expression", what)
 	default:
-		b.errorAt(CodeWrongType, v.Pos, "%s must be a boolean or an expression, not %s", what, v.Kind)
+		b.report(CodeWrongType, v.Pos, "%s must be a boolean or an expression, not %s", what, v.Kind)
 	}
 	return nil
 }
@@ -190,7 +182,7 @@ func (b *binder) bindIntOrExpr(v *Value, what string) (OrExpr[int64], bool) {
 	case KindNumber:
 		n, ok := intFromLexeme(v.Number)
 		if !ok {
-			b.errorAt(CodeInvalidValue, v.Pos, "%s must be an integer", what)
+			b.report(CodeInvalidValue, v.Pos, "%s must be an integer", what)
 			return OrExpr[int64]{}, false
 		}
 		return OrExpr[int64]{Literal: &n}, true
@@ -198,9 +190,9 @@ func (b *binder) bindIntOrExpr(v *Value, what string) (OrExpr[int64], bool) {
 		if body, ok := ExprBody(v.Str); ok {
 			return OrExpr[int64]{Expr: &Expr{Body: body, Pos: v.Pos}}, true
 		}
-		b.errorAt(CodeWrongType, v.Pos, "%s must be an integer or an expression", what)
+		b.report(CodeWrongType, v.Pos, "%s must be an integer or an expression", what)
 	default:
-		b.errorAt(CodeWrongType, v.Pos, "%s must be an integer or an expression, not %s", what, v.Kind)
+		b.report(CodeWrongType, v.Pos, "%s must be an integer or an expression, not %s", what, v.Kind)
 	}
 	return OrExpr[int64]{}, false
 }
@@ -216,6 +208,20 @@ func (b *binder) bindStringOrExpr(v *Value, what string) (OrExpr[string], bool) 
 	return OrExpr[string]{Literal: &s}, true
 }
 
+// bindResultType binds a type envelope field: a string-or-expression that,
+// as a literal, must name a non-success Result type. Both constructed
+// failures — a Raise result and an onFailure phase — carry it.
+func (b *binder) bindResultType(v *Value) *OrExpr[string] {
+	x, ok := b.bindStringOrExpr(v, "type")
+	if !ok {
+		return nil
+	}
+	if x.Literal != nil && *x.Literal == ResultTypeSuccess {
+		b.report(CodeInvalidValue, v.Pos, "type must be a non-success Result type")
+	}
+	return &x
+}
+
 func (b *binder) bindRetryable(v *Value) *RetryableField {
 	switch v.Kind {
 	case KindBool:
@@ -227,9 +233,9 @@ func (b *binder) bindRetryable(v *Value) *RetryableField {
 		if body, ok := ExprBody(v.Str); ok {
 			return &RetryableField{Expr: &Expr{Body: body, Pos: v.Pos}}
 		}
-		b.errorAt(CodeWrongType, v.Pos, "retryable must be a boolean, null, or an expression")
+		b.report(CodeWrongType, v.Pos, "retryable must be a boolean, null, or an expression")
 	default:
-		b.errorAt(CodeWrongType, v.Pos, "retryable must be a boolean, null, or an expression, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "retryable must be a boolean, null, or an expression, not %s", v.Kind)
 	}
 	return nil
 }
@@ -244,9 +250,9 @@ func (b *binder) bindPrevious(v *Value) *PreviousField {
 		if body, ok := ExprBody(v.Str); ok {
 			return &PreviousField{Expr: &Expr{Body: body, Pos: v.Pos}}
 		}
-		b.errorAt(CodeWrongType, v.Pos, "previous must be an object, null, or an expression")
+		b.report(CodeWrongType, v.Pos, "previous must be an object, null, or an expression")
 	default:
-		b.errorAt(CodeWrongType, v.Pos, "previous must be an object, null, or an expression, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "previous must be an object, null, or an expression, not %s", v.Kind)
 	}
 	return nil
 }

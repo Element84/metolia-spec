@@ -15,7 +15,7 @@ const flowSchemaURI = "https://mwl.dev/v0.1/flow/schema.json"
 func bind(root *Value) (*Flow, Diagnostics) {
 	b := &binder{}
 	if root.Kind != KindObject {
-		b.errorAt(CodeWrongType, root.Pos,
+		b.report(CodeWrongType, root.Pos,
 			"the root of a workflow definition must be an object, not %s", root.Kind)
 		return nil, b.diags
 	}
@@ -27,7 +27,7 @@ func bind(root *Value) (*Flow, Diagnostics) {
 
 func (b *binder) bindFlow(v *Value, root bool) *Flow {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "a Flow must be an object, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "a Flow must be an object, not %s", v.Kind)
 		return nil
 	}
 	f := &Flow{Pos: v.Pos}
@@ -37,7 +37,7 @@ func (b *binder) bindFlow(v *Value, root bool) *Flow {
 		switch m.Name {
 		case "$schema":
 			if !root {
-				b.errorAt(CodeUnknownMember, m.NamePos,
+				b.report(CodeUnknownMember, m.NamePos,
 					"unknown member %q: $schema is permitted on the root document only", m.Name)
 				break
 			}
@@ -45,7 +45,7 @@ func (b *binder) bindFlow(v *Value, root bool) *Flow {
 			if s, ok := b.requireString(m.Value, "$schema"); ok {
 				f.Schema = s
 				if s != flowSchemaURI {
-					b.errorAt(CodeInvalidValue, m.Value.Pos, "$schema must be %q", flowSchemaURI)
+					b.report(CodeInvalidValue, m.Value.Pos, "$schema must be %q", flowSchemaURI)
 				}
 			}
 		case "comment":
@@ -81,14 +81,14 @@ func (b *binder) bindFlow(v *Value, root bool) *Flow {
 
 func (b *binder) bindFlows(v *Value) ([]NamedFlow, map[string]int) {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "flows must be an object of named Flows, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "flows must be an object of named Flows, not %s", v.Kind)
 		return nil, nil
 	}
 	var flows []NamedFlow
 	index := make(map[string]int)
 	for _, m := range v.Object {
 		if _, isExpr := ExprBody(m.Name); isExpr {
-			b.errorAt(CodeExpressionNotPermitted, m.NamePos,
+			b.report(CodeExpressionNotPermitted, m.NamePos,
 				"a flow name is structural and does not accept an expression")
 		}
 		b.pushKey(m.Name)
@@ -104,17 +104,17 @@ func (b *binder) bindFlows(v *Value) ([]NamedFlow, map[string]int) {
 
 func (b *binder) bindSteps(v *Value) ([]NamedStep, map[string]int) {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "steps must be an object of named Steps, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "steps must be an object of named Steps, not %s", v.Kind)
 		return nil, nil
 	}
 	if len(v.Object) == 0 {
-		b.errorAt(CodeInvalidValue, v.Pos, "steps must define at least one Step")
+		b.report(CodeInvalidValue, v.Pos, "steps must define at least one Step")
 	}
 	var steps []NamedStep
 	index := make(map[string]int)
 	for _, m := range v.Object {
 		if _, isExpr := ExprBody(m.Name); isExpr {
-			b.errorAt(CodeExpressionNotPermitted, m.NamePos,
+			b.report(CodeExpressionNotPermitted, m.NamePos,
 				"a Step name is structural and does not accept an expression")
 		}
 		b.pushKey(m.Name)
@@ -132,7 +132,7 @@ func (b *binder) bindSteps(v *Value) ([]NamedStep, map[string]int) {
 
 func (b *binder) bindStep(v *Value) Step {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "a Step must be an object, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "a Step must be an object, not %s", v.Kind)
 		return nil
 	}
 	action := v.Field("action")
@@ -160,7 +160,7 @@ func (b *binder) bindStep(v *Value) Step {
 	case "Raise":
 		return b.bindRaiseStep(v)
 	default:
-		b.errorAt(CodeInvalidValue, action.Pos,
+		b.report(CodeInvalidValue, action.Pos,
 			"unknown action %q; expected Call, Gather, Match, Pass, Sleep, Return, or Raise", name)
 		return nil
 	}
@@ -243,10 +243,10 @@ func (b *binder) bindGatherStep(v *Value) *GatherStep {
 	}
 	switch {
 	case hasCalls && (hasOver || hasCall):
-		b.errorAt(CodeExclusiveMembers, v.Pos,
+		b.report(CodeExclusiveMembers, v.Pos,
 			"a Gather carries exactly one of its two forms: over with call, or calls")
 	case !hasCalls && !hasOver && !hasCall:
-		b.errorAt(CodeExclusiveMembers, v.Pos,
+		b.report(CodeExclusiveMembers, v.Pos,
 			"a Gather carries exactly one of its two forms: over with call, or calls")
 	case hasOver && !hasCall:
 		b.missingMember(v.Pos, "the iterate form requires call beside over")
@@ -268,20 +268,20 @@ func (b *binder) bindOver(v *Value) *OrExpr[[]*Value] {
 		if body, ok := ExprBody(v.Str); ok {
 			return &OrExpr[[]*Value]{Expr: &Expr{Body: body, Pos: v.Pos}}
 		}
-		b.errorAt(CodeWrongType, v.Pos, "over must be an array or an expression")
+		b.report(CodeWrongType, v.Pos, "over must be an array or an expression")
 	default:
-		b.errorAt(CodeWrongType, v.Pos, "over must be an array or an expression, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "over must be an array or an expression, not %s", v.Kind)
 	}
 	return nil
 }
 
 func (b *binder) bindCalls(v *Value) []*Call {
 	if v.Kind != KindArray {
-		b.errorAt(CodeWrongType, v.Pos, "calls must be an array of call objects, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "calls must be an array of call objects, not %s", v.Kind)
 		return nil
 	}
 	if len(v.Array) == 0 {
-		b.errorAt(CodeInvalidValue, v.Pos, "calls must be a non-empty array")
+		b.report(CodeInvalidValue, v.Pos, "calls must be a non-empty array")
 		return nil
 	}
 	var calls []*Call
@@ -298,7 +298,7 @@ func (b *binder) bindCalls(v *Value) []*Call {
 
 func (b *binder) bindCompletion(v *Value) *Completion {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "completion must be an object, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "completion must be an object, not %s", v.Kind)
 		return nil
 	}
 	c := &Completion{Pos: v.Pos}
@@ -313,7 +313,7 @@ func (b *binder) bindCompletion(v *Value) *Completion {
 			}
 		case "wait":
 			if m.Value.Kind != KindBool {
-				b.errorAt(CodeWrongType, m.Value.Pos,
+				b.report(CodeWrongType, m.Value.Pos,
 					"wait must be a literal boolean; it does not accept an expression")
 			} else {
 				lit := m.Value.Bool
@@ -340,16 +340,16 @@ func (b *binder) bindConcurrency(v *Value) *ConcurrencyCap {
 	case KindNumber:
 		n, ok := intFromLexeme(v.Number)
 		if !ok {
-			b.errorAt(CodeInvalidValue, v.Pos, "concurrency must be an integer")
+			b.report(CodeInvalidValue, v.Pos, "concurrency must be an integer")
 			return nil
 		}
 		if n < 1 {
-			b.errorAt(CodeInvalidValue, v.Pos, "concurrency must be at least 1")
+			b.report(CodeInvalidValue, v.Pos, "concurrency must be at least 1")
 			return nil
 		}
 		return &ConcurrencyCap{Pos: v.Pos, Value: n}
 	default:
-		b.errorAt(CodeWrongType, v.Pos,
+		b.report(CodeWrongType, v.Pos,
 			"concurrency must be an integer or null; it does not accept an expression")
 		return nil
 	}
@@ -388,7 +388,7 @@ func (b *binder) bindMatchStep(v *Value) *MatchStep {
 
 func (b *binder) bindMatchCases(v *Value) []MatchCase {
 	if v.Kind != KindArray {
-		b.errorAt(CodeWrongType, v.Pos, "cases must be an array of clauses, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "cases must be an array of clauses, not %s", v.Kind)
 		return nil
 	}
 	var cases []MatchCase
@@ -404,7 +404,7 @@ func (b *binder) bindMatchCases(v *Value) []MatchCase {
 
 func (b *binder) bindMatchCase(v *Value) (MatchCase, bool) {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "a cases clause must be an object, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "a cases clause must be an object, not %s", v.Kind)
 		return MatchCase{}, false
 	}
 	c := MatchCase{Pos: v.Pos}
@@ -442,7 +442,7 @@ func (b *binder) bindMatchCase(v *Value) (MatchCase, bool) {
 
 func (b *binder) bindMatchDefault(v *Value) MatchDefault {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "default must be an object, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "default must be an object, not %s", v.Kind)
 		return MatchDefault{}
 	}
 	d := MatchDefault{Pos: v.Pos}
@@ -451,7 +451,7 @@ func (b *binder) bindMatchDefault(v *Value) MatchDefault {
 		b.pushKey(m.Name)
 		switch m.Name {
 		case "when":
-			b.errorAt(CodeUnknownMember, m.NamePos,
+			b.report(CodeUnknownMember, m.NamePos,
 				"unknown member \"when\": the default clause carries no predicate")
 		case "output":
 			d.Output = m.Value
@@ -528,7 +528,7 @@ func (b *binder) bindSleepStep(v *Value) *SleepStep {
 		b.pop()
 	}
 	if hasFor == hasUntil {
-		b.errorAt(CodeExclusiveMembers, v.Pos, "a Sleep carries exactly one of for and until")
+		b.report(CodeExclusiveMembers, v.Pos, "a Sleep carries exactly one of for and until")
 	}
 	if !hasNext {
 		b.missingMember(v.Pos, "a Sleep Step requires next")
@@ -574,7 +574,7 @@ func (b *binder) bindRaiseStep(v *Value) *RaiseStep {
 
 func (b *binder) bindRaiseResult(v *Value) *RaiseResult {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "result must be an object, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "result must be an object, not %s", v.Kind)
 		return nil
 	}
 	r := &RaiseResult{Pos: v.Pos}
@@ -583,12 +583,7 @@ func (b *binder) bindRaiseResult(v *Value) *RaiseResult {
 		b.pushKey(m.Name)
 		switch m.Name {
 		case "type":
-			if x, ok := b.bindStringOrExpr(m.Value, "type"); ok {
-				if x.Literal != nil && *x.Literal == ResultTypeSuccess {
-					b.errorAt(CodeInvalidValue, m.Value.Pos, "type must be a non-success Result type")
-				}
-				r.Type = &x
-			}
+			r.Type = b.bindResultType(m.Value)
 		case "code":
 			hasCode = true
 			if x, ok := b.bindStringOrExpr(m.Value, "code"); ok {
@@ -619,7 +614,7 @@ func (b *binder) bindRaiseResult(v *Value) *RaiseResult {
 
 func (b *binder) bindCall(v *Value) *Call {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "a call must be an object, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "a call must be an object, not %s", v.Kind)
 		return nil
 	}
 	c := &Call{Pos: v.Pos}
@@ -649,7 +644,7 @@ func (b *binder) bindCall(v *Value) *Call {
 		b.pop()
 	}
 	if hasProvider == hasFlow {
-		b.errorAt(CodeExclusiveMembers, v.Pos,
+		b.report(CodeExclusiveMembers, v.Pos,
 			"a call names exactly one target: provider or flow")
 	}
 	return c
@@ -659,7 +654,7 @@ func (b *binder) bindFlowTarget(v *Value) *FlowTarget {
 	switch v.Kind {
 	case KindString:
 		if _, isExpr := ExprBody(v.Str); isExpr {
-			b.errorAt(CodeExpressionNotPermitted, v.Pos,
+			b.report(CodeExpressionNotPermitted, v.Pos,
 				"flow is structural and does not accept an expression")
 			return nil
 		}
@@ -670,7 +665,7 @@ func (b *binder) bindFlowTarget(v *Value) *FlowTarget {
 		}
 		return nil
 	default:
-		b.errorAt(CodeWrongType, v.Pos, "flow must be a name or a Flow object, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "flow must be a name or a Flow object, not %s", v.Kind)
 		return nil
 	}
 }
@@ -681,14 +676,12 @@ func (b *binder) bindProviderRef(v *Value, kind string) *ProviderRef {
 		return nil
 	}
 	if _, isExpr := ExprBody(s); isExpr {
-		b.errorAt(CodeExpressionNotPermitted, v.Pos,
+		b.report(CodeExpressionNotPermitted, v.Pos,
 			"provider is structural and does not accept an expression")
 		return nil
 	}
 	if !validProviderURI(s, kind) {
-		b.errorAt(CodeInvalidProviderURI, v.Pos,
-			"%q is not a well-formed %s-provider URI; expected mwl:provider.%s/<namespace>/<name>",
-			s, kind, kind)
+		b.invalidProviderURI(v.Pos, s, kind)
 		return nil
 	}
 	return &ProviderRef{URI: s, Pos: v.Pos}
@@ -696,7 +689,7 @@ func (b *binder) bindProviderRef(v *Value, kind string) *ProviderRef {
 
 func (b *binder) bindSuccessArm(v *Value) *SuccessArm {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "onSuccess must be an object, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "onSuccess must be an object, not %s", v.Kind)
 		return nil
 	}
 	a := &SuccessArm{Pos: v.Pos}
@@ -717,7 +710,7 @@ func (b *binder) bindSuccessArm(v *Value) *SuccessArm {
 
 func (b *binder) bindFailureArm(v *Value) *FailureArm {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "onFailure must be an object, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "onFailure must be an object, not %s", v.Kind)
 		return nil
 	}
 	a := &FailureArm{Pos: v.Pos}
@@ -738,7 +731,7 @@ func (b *binder) bindFailureArm(v *Value) *FailureArm {
 
 func (b *binder) bindCatch(v *Value) []CatchClause {
 	if v.Kind != KindArray {
-		b.errorAt(CodeWrongType, v.Pos, "catch must be an array of clauses, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "catch must be an array of clauses, not %s", v.Kind)
 		return nil
 	}
 	var clauses []CatchClause
@@ -754,7 +747,7 @@ func (b *binder) bindCatch(v *Value) []CatchClause {
 
 func (b *binder) bindCatchClause(v *Value) (CatchClause, bool) {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "a catch clause must be an object, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "a catch clause must be an object, not %s", v.Kind)
 		return CatchClause{}, false
 	}
 	c := CatchClause{Pos: v.Pos}
@@ -790,7 +783,7 @@ func (b *binder) bindCatchClause(v *Value) (CatchClause, bool) {
 
 func (b *binder) bindMatcher(v *Value) FailureMatcher {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "a failure matcher must be an object, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "a failure matcher must be an object, not %s", v.Kind)
 		return FailureMatcher{}
 	}
 	f := FailureMatcher{Pos: v.Pos}
@@ -807,7 +800,7 @@ func (b *binder) bindMatcher(v *Value) FailureMatcher {
 		case "retryable":
 			known = true
 			if m.Value.Kind != KindBool {
-				b.errorAt(CodeWrongType, m.Value.Pos,
+				b.report(CodeWrongType, m.Value.Pos,
 					"matcher retryable must be a literal boolean, not %s", m.Value.Kind)
 			} else {
 				lit := m.Value.Bool
@@ -819,18 +812,18 @@ func (b *binder) bindMatcher(v *Value) FailureMatcher {
 		b.pop()
 	}
 	if !known {
-		b.errorAt(CodeInvalidValue, v.Pos, "a failure matcher must have at least one member")
+		b.report(CodeInvalidValue, v.Pos, "a failure matcher must have at least one member")
 	}
 	return f
 }
 
 func (b *binder) bindMatcherList(v *Value, what string, rejectSuccess bool) []StringLit {
 	if v.Kind != KindArray {
-		b.errorAt(CodeWrongType, v.Pos, "%s must be an array of strings, not %s", what, v.Kind)
+		b.report(CodeWrongType, v.Pos, "%s must be an array of strings, not %s", what, v.Kind)
 		return nil
 	}
 	if len(v.Array) == 0 {
-		b.errorAt(CodeInvalidValue, v.Pos, "%s must be a non-empty array", what)
+		b.report(CodeInvalidValue, v.Pos, "%s must be a non-empty array", what)
 		return nil
 	}
 	var list []StringLit
@@ -838,7 +831,7 @@ func (b *binder) bindMatcherList(v *Value, what string, rejectSuccess bool) []St
 		b.pushIdx(i)
 		if s, ok := b.requireString(e, what+" entry"); ok {
 			if rejectSuccess && s == ResultTypeSuccess {
-				b.errorAt(CodeInvalidValue, e.Pos,
+				b.report(CodeInvalidValue, e.Pos,
 					`"success" is not a permissible matcher type; a matcher selects among failures`)
 			}
 			list = append(list, StringLit{Value: s, Pos: e.Pos})
@@ -852,7 +845,7 @@ func (b *binder) bindMatcherList(v *Value, what string, rejectSuccess bool) []St
 
 func (b *binder) bindMiddlewareStack(v *Value) []MiddlewareEntry {
 	if v.Kind != KindArray {
-		b.errorAt(CodeWrongType, v.Pos, "middleware must be an array of entries, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "middleware must be an array of entries, not %s", v.Kind)
 		return nil
 	}
 	var entries []MiddlewareEntry
@@ -868,7 +861,7 @@ func (b *binder) bindMiddlewareStack(v *Value) []MiddlewareEntry {
 
 func (b *binder) bindMiddlewareEntry(v *Value) (MiddlewareEntry, bool) {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "a middleware entry must be an object, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "a middleware entry must be an object, not %s", v.Kind)
 		return MiddlewareEntry{}, false
 	}
 	e := MiddlewareEntry{Pos: v.Pos}
@@ -904,7 +897,7 @@ func (b *binder) bindMiddlewareEntry(v *Value) (MiddlewareEntry, bool) {
 
 func (b *binder) bindPhaseOnEntry(v *Value) *PhaseOnEntry {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "onEntry must be an object, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "onEntry must be an object, not %s", v.Kind)
 		return nil
 	}
 	p := &PhaseOnEntry{Pos: v.Pos}
@@ -929,7 +922,7 @@ func (b *binder) bindPhaseOnEntry(v *Value) *PhaseOnEntry {
 
 func (b *binder) bindPhaseOnSuccess(v *Value) *PhaseOnSuccess {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "onSuccess must be an object, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "onSuccess must be an object, not %s", v.Kind)
 		return nil
 	}
 	p := &PhaseOnSuccess{Pos: v.Pos}
@@ -954,7 +947,7 @@ func (b *binder) bindPhaseOnSuccess(v *Value) *PhaseOnSuccess {
 
 func (b *binder) bindPhaseOnFailure(v *Value) *PhaseOnFailure {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "onFailure must be an object, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "onFailure must be an object, not %s", v.Kind)
 		return nil
 	}
 	p := &PhaseOnFailure{Pos: v.Pos}
@@ -968,12 +961,7 @@ func (b *binder) bindPhaseOnFailure(v *Value) *PhaseOnFailure {
 		case "assign":
 			p.Assign = b.bindAssign(m.Value)
 		case "type":
-			if x, ok := b.bindStringOrExpr(m.Value, "type"); ok {
-				if x.Literal != nil && *x.Literal == ResultTypeSuccess {
-					b.errorAt(CodeInvalidValue, m.Value.Pos, "type must be a non-success Result type")
-				}
-				p.Type = &x
-			}
+			p.Type = b.bindResultType(m.Value)
 		case "code":
 			if x, ok := b.bindStringOrExpr(m.Value, "code"); ok {
 				p.Code = &x
@@ -998,7 +986,7 @@ func (b *binder) bindPhaseOnFailure(v *Value) *PhaseOnFailure {
 
 func (b *binder) bindPhaseOnAlways(v *Value) *PhaseOnAlways {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "onAlways must be an object, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "onAlways must be an object, not %s", v.Kind)
 		return nil
 	}
 	p := &PhaseOnAlways{Pos: v.Pos}

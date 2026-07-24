@@ -4,10 +4,11 @@
 // nil pointers and empty slices omitted (which collapses the
 // literal-or-expression pair types to their one-key form), unexported
 // fields invisible -- so a field added to the AST appears in the output
-// without touching this file. What remains hand-written is exactly the set
-// of semantic decisions the struct shapes cannot express: the action
-// discriminator, position rendering, value trees with classified string
-// leaves, the explicit-null pair types, and the "pos"-last key rule.
+// without touching this file. The action discriminator comes from the
+// variant itself (Step.Action). What remains hand-written is exactly the
+// set of semantic decisions the struct shapes cannot express: position
+// rendering, value trees with classified string leaves, the explicit-null
+// pair types, and the "pos"-last key rule.
 package main
 
 import (
@@ -123,25 +124,21 @@ func encProvider(p *parser.Provider) *obj {
 	return walkStruct(reflect.ValueOf(p).Elem(), "", false)
 }
 
-// stepActions maps each Step variant to its action discriminator, which in
-// Go lives in the type and in the source lives in the "action" field. A
-// new variant that is not added here panics in walkValue, which the golden
-// tests catch.
-var stepActions = map[reflect.Type]string{
-	reflect.TypeOf(parser.CallStep{}):   "Call",
-	reflect.TypeOf(parser.GatherStep{}): "Gather",
-	reflect.TypeOf(parser.MatchStep{}):  "Match",
-	reflect.TypeOf(parser.PassStep{}):   "Pass",
-	reflect.TypeOf(parser.SleepStep{}):  "Sleep",
-	reflect.TypeOf(parser.ReturnStep{}): "Return",
-	reflect.TypeOf(parser.RaiseStep{}):  "Raise",
+// fieldKey names one field of one AST struct; the policy tables below are
+// keyed by it so a policy never leaks onto a same-named field of another
+// type.
+type fieldKey struct {
+	typ  reflect.Type
+	name string
 }
 
-// keyOverrides holds the field names whose camelCased form is not the
-// source's key.
-var keyOverrides = map[string]string{
-	"URI":    "uri",
-	"Schema": "$schema",
+// keyOverrides holds the fields whose camelCased name is not the source's
+// key.
+var keyOverrides = map[fieldKey]string{
+	{flowType, "Schema"}:     "$schema",
+	{providerType, "Schema"}: "$schema",
+	{providerType, "URI"}:    "uri",
+	{providerRefType, "URI"}: "uri",
 }
 
 // fieldOrder overrides the struct declaration order where the output order
@@ -160,17 +157,22 @@ var fieldOrder = map[reflect.Type][]string{
 }
 
 // omitWhenEmptyString names the string fields where the empty string means
-// "absent" rather than an authored empty value.
-var omitWhenEmptyString = map[string]bool{
-	"Comment":    true,
-	"Schema":     true,
-	"Acceptance": true,
+// "absent" rather than an authored empty value. Comment is not listed: like
+// Pos, it is an AST-wide convention — optional on every struct that carries
+// it — and walkStruct omits it by name.
+var omitWhenEmptyString = map[fieldKey]bool{
+	{flowType, "Schema"}:            true,
+	{providerType, "Schema"}:        true,
+	{phaseActionType, "Acceptance"}: true,
 }
 
 var (
-	positionType  = reflect.TypeOf(parser.Position{})
-	valuePtrType  = reflect.TypeOf((*parser.Value)(nil))
-	stepIfaceType = reflect.TypeOf((*parser.Step)(nil)).Elem()
+	flowType        = reflect.TypeOf(parser.Flow{})
+	providerType    = reflect.TypeOf(parser.Provider{})
+	providerRefType = reflect.TypeOf(parser.ProviderRef{})
+	phaseActionType = reflect.TypeOf(parser.PhaseAction{})
+	positionType    = reflect.TypeOf(parser.Position{})
+	valuePtrType    = reflect.TypeOf((*parser.Value)(nil))
 )
 
 // walkStruct derives a struct's JSON object from its fields: skip
@@ -178,7 +180,8 @@ var (
 // strings; camelCase the key; recurse on the value. An action discriminator
 // leads when present, and "pos" always trails (DESIGN.md's key-order rule).
 // classify is carried down to string leaves in value trees; it turns off
-// under Parameters, the one Value field that is not a template.
+// under Flow.Parameters, the one flow-side Value field that is not a
+// template.
 func walkStruct(v reflect.Value, action string, classify bool) *obj {
 	t := v.Type()
 	o := newObj()
@@ -200,22 +203,24 @@ func walkStruct(v reflect.Value, action string, classify bool) *obj {
 			continue
 		}
 		fv := v.FieldByIndex(f.Index)
+		omitEmpty := name == "Comment" || omitWhenEmptyString[fieldKey{t, name}]
 		switch {
 		case fv.Kind() == reflect.Pointer && fv.IsNil(),
 			fv.Kind() == reflect.Interface && fv.IsNil(),
 			fv.Kind() == reflect.Slice && fv.Len() == 0,
-			fv.Kind() == reflect.String && fv.String() == "" && omitWhenEmptyString[name]:
+			fv.Kind() == reflect.String && fv.String() == "" && omitEmpty:
 			continue
 		}
 		if name == "Pos" && f.Type == positionType {
 			pos = encPos(fv.Interface().(parser.Position))
 			continue
 		}
-		key := keyOverrides[name]
+		key := keyOverrides[fieldKey{t, name}]
 		if key == "" {
 			key = lowerFirst(name)
 		}
-		o.set(key, walkValue(fv, classify && name != "Parameters"))
+		schemaField := t == flowType && name == "Parameters"
+		o.set(key, walkValue(fv, classify && !schemaField))
 	}
 	if pos != nil {
 		o.set("pos", pos)
@@ -238,13 +243,10 @@ func walkValue(v reflect.Value, classify bool) any {
 	case reflect.Pointer:
 		return walkValue(v.Elem(), classify)
 	case reflect.Interface:
-		if v.Type() == stepIfaceType {
-			concrete := v.Elem().Elem() // Step -> *XStep -> XStep
-			action, ok := stepActions[concrete.Type()]
-			if !ok {
-				panic(fmt.Sprintf("unknown step type %s", concrete.Type()))
-			}
-			return walkStruct(concrete, action, classify)
+		if step, ok := v.Interface().(parser.Step); ok {
+			// Step -> *XStep -> XStep; the discriminator comes from the
+			// variant itself.
+			return walkStruct(v.Elem().Elem(), step.Action(), classify)
 		}
 		return walkValue(v.Elem(), classify)
 	case reflect.Struct:

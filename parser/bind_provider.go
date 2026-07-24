@@ -15,7 +15,7 @@ const providerSchemaURI = "https://mwl.dev/v0.1/provider/schema.json"
 func bindProvider(root *Value) (*Provider, Diagnostics) {
 	b := &binder{}
 	if root.Kind != KindObject {
-		b.errorAt(CodeWrongType, root.Pos,
+		b.report(CodeWrongType, root.Pos,
 			"the root of a provider definition must be an object, not %s", root.Kind)
 		return nil, b.diags
 	}
@@ -37,16 +37,14 @@ func (b *binder) bindProviderRoot(v *Value) *Provider {
 	}
 	kind, known := providerURIKind(uri)
 	if !known {
-		b.errorAt(CodeInvalidProviderURI, uriVal.Pos,
+		b.report(CodeInvalidProviderURI, uriVal.Pos,
 			"%q is not a well-formed provider URI; expected mwl:provider.call/... or mwl:provider.middleware/...",
 			uri)
 		b.pop()
 		return nil
 	}
 	if !validProviderURI(uri, kind) {
-		b.errorAt(CodeInvalidProviderURI, uriVal.Pos,
-			"%q is not a well-formed %s-provider URI; expected mwl:provider.%s/<namespace>/<name>",
-			uri, kind, kind)
+		b.invalidProviderURI(uriVal.Pos, uri, kind)
 	}
 	b.pop()
 
@@ -68,7 +66,7 @@ func (b *binder) bindProviderRoot(v *Value) *Provider {
 			if s, ok := b.requireString(m.Value, "$schema"); ok {
 				p.Schema = s
 				if s != providerSchemaURI {
-					b.errorAt(CodeInvalidValue, m.Value.Pos, "$schema must be %q", providerSchemaURI)
+					b.report(CodeInvalidValue, m.Value.Pos, "$schema must be %q", providerSchemaURI)
 				}
 			}
 		case "uri":
@@ -77,7 +75,7 @@ func (b *binder) bindProviderRoot(v *Value) *Provider {
 			hasCodePrefix = true
 			if s, ok := b.requireString(m.Value, "codePrefix"); ok {
 				if !validCodePrefix(s) {
-					b.errorAt(CodeInvalidValue, m.Value.Pos,
+					b.report(CodeInvalidValue, m.Value.Pos,
 						"codePrefix must be an uppercase letter followed by letters and digits")
 				}
 				p.CodePrefix = StringLit{Value: s, Pos: m.Value.Pos}
@@ -145,11 +143,11 @@ func (b *binder) bindProviderRoot(v *Value) *Provider {
 
 func (b *binder) bindAttachment(v *Value) []StringLit {
 	if v.Kind != KindArray {
-		b.errorAt(CodeWrongType, v.Pos, "attachment must be an array of levels, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "attachment must be an array of levels, not %s", v.Kind)
 		return nil
 	}
 	if len(v.Array) == 0 {
-		b.errorAt(CodeInvalidValue, v.Pos, "attachment must name at least one level")
+		b.report(CodeInvalidValue, v.Pos, "attachment must name at least one level")
 		return nil
 	}
 	var list []StringLit
@@ -159,10 +157,10 @@ func (b *binder) bindAttachment(v *Value) []StringLit {
 		if s, ok := b.requireString(e, "attachment entry"); ok {
 			switch {
 			case s != AttachmentStep && s != AttachmentFlow:
-				b.errorAt(CodeInvalidValue, e.Pos,
+				b.report(CodeInvalidValue, e.Pos,
 					`unknown attachment level %q; expected "step" or "flow"`, s)
 			case seen[s]:
-				b.errorAt(CodeInvalidValue, e.Pos, "attachment repeats level %q", s)
+				b.report(CodeInvalidValue, e.Pos, "attachment repeats level %q", s)
 			}
 			seen[s] = true
 			list = append(list, StringLit{Value: s, Pos: e.Pos})
@@ -174,12 +172,12 @@ func (b *binder) bindAttachment(v *Value) []StringLit {
 
 func (b *binder) bindPhaseContracts(v *Value) PhaseContracts {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "phases must be an object, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "phases must be an object, not %s", v.Kind)
 		return PhaseContracts{Pos: v.Pos}
 	}
 	p := PhaseContracts{Pos: v.Pos}
 	if len(v.Object) == 0 {
-		b.errorAt(CodeInvalidValue, v.Pos, "phases must declare at least one phase")
+		b.report(CodeInvalidValue, v.Pos, "phases must declare at least one phase")
 	}
 	for _, m := range v.Object {
 		b.pushKey(m.Name)
@@ -193,7 +191,7 @@ func (b *binder) bindPhaseContracts(v *Value) PhaseContracts {
 		case "onAlways":
 			p.OnAlways = b.bindPhaseContract(m.Value)
 		default:
-			b.errorAt(CodeUnknownMember, m.NamePos,
+			b.report(CodeUnknownMember, m.NamePos,
 				"unknown phase %q; expected onEntry, onSuccess, onFailure, or onAlways", m.Name)
 		}
 		b.pop()
@@ -203,7 +201,7 @@ func (b *binder) bindPhaseContracts(v *Value) PhaseContracts {
 
 func (b *binder) bindPhaseContract(v *Value) *PhaseContract {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "a phase contract must be an object, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "a phase contract must be an object, not %s", v.Kind)
 		return nil
 	}
 	c := &PhaseContract{Pos: v.Pos}
@@ -233,7 +231,7 @@ func (b *binder) bindPhaseContract(v *Value) *PhaseContract {
 
 func (b *binder) bindPhaseAction(v *Value) *PhaseAction {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "action must be an object, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "action must be an object, not %s", v.Kind)
 		return nil
 	}
 	a := &PhaseAction{Pos: v.Pos}
@@ -245,7 +243,7 @@ func (b *binder) bindPhaseAction(v *Value) *PhaseAction {
 			hasKind = true
 			if s, ok := b.requireString(m.Value, "kind"); ok {
 				if s != ActionKindSideEffect && s != ActionKindControl && s != ActionKindTransform {
-					b.errorAt(CodeInvalidValue, m.Value.Pos,
+					b.report(CodeInvalidValue, m.Value.Pos,
 						"unknown action kind %q; expected side-effect, control, or transform", s)
 				}
 				a.Kind = StringLit{Value: s, Pos: m.Value.Pos}
@@ -271,7 +269,7 @@ func (b *binder) bindPhaseAction(v *Value) *PhaseAction {
 
 func (b *binder) bindStructural(v *Value) []StringLit {
 	if v.Kind != KindArray {
-		b.errorAt(CodeWrongType, v.Pos, "structural must be an array of parameter names, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "structural must be an array of parameter names, not %s", v.Kind)
 		return nil
 	}
 	var list []StringLit
@@ -287,7 +285,7 @@ func (b *binder) bindStructural(v *Value) []StringLit {
 
 func (b *binder) bindFailureCatalog(v *Value) FailureCatalog {
 	if v.Kind != KindObject {
-		b.errorAt(CodeWrongType, v.Pos, "failureCatalog must be an object, not %s", v.Kind)
+		b.report(CodeWrongType, v.Pos, "failureCatalog must be an object, not %s", v.Kind)
 		return FailureCatalog{Pos: v.Pos}
 	}
 	c := FailureCatalog{Pos: v.Pos}
@@ -319,7 +317,7 @@ func (b *binder) bindFailureCatalog(v *Value) FailureCatalog {
 
 func (b *binder) bindCatalogList(v *Value, what string, valid func(string) bool, requirement string) []StringLit {
 	if v.Kind != KindArray {
-		b.errorAt(CodeWrongType, v.Pos, "%s must be an array of strings, not %s", what, v.Kind)
+		b.report(CodeWrongType, v.Pos, "%s must be an array of strings, not %s", what, v.Kind)
 		return nil
 	}
 	var list []StringLit
@@ -327,7 +325,7 @@ func (b *binder) bindCatalogList(v *Value, what string, valid func(string) bool,
 		b.pushIdx(i)
 		if s, ok := b.requireString(e, what+" entry"); ok {
 			if !valid(s) {
-				b.errorAt(CodeInvalidValue, e.Pos, "%s", requirement)
+				b.report(CodeInvalidValue, e.Pos, "%s", requirement)
 			}
 			list = append(list, StringLit{Value: s, Pos: e.Pos})
 		}

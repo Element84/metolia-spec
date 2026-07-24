@@ -18,12 +18,12 @@ func check(f *Flow) Diagnostics {
 	return c.diags
 }
 
-// flowChecker carries the flow-reference graph beside the shared checker
+// flowChecker carries the flow-reference graph beside the shared reporter
 // machinery: every Flow object is a node, and an edge runs from the Flow
 // containing a call to the Flow the call targets. The graph is flow-only
-// state, so it lives here rather than on the checker itself.
+// state, so it lives here rather than on the reporter itself.
 type flowChecker struct {
-	checker
+	reporter
 
 	nodes []*Flow
 	names map[*Flow]string
@@ -46,7 +46,7 @@ func (c *flowChecker) checkFlow(f *Flow, chain []*Flow, name string) {
 	c.names[f] = name
 
 	if _, ok := f.StepByName(f.Entrypoint.Value); !ok {
-		c.report(CodeUnresolvedStep, f.Entrypoint.Pos,
+		c.reportPath(CodeUnresolvedStep, f.Entrypoint.Pos,
 			renderPath(c.path, "entrypoint"),
 			"entrypoint names unknown Step %q", f.Entrypoint.Value)
 	}
@@ -63,7 +63,7 @@ func (c *flowChecker) checkFlow(f *Flow, chain []*Flow, name string) {
 	for _, nf := range f.Flows {
 		for _, enclosing := range chain[1:] {
 			if outer, ok := enclosing.FlowByName(nf.Name); ok {
-				c.report(CodeShadowedFlow, nf.NamePos,
+				c.reportPath(CodeShadowedFlow, nf.NamePos,
 					renderPath(c.path, nf.Name),
 					"flows entry %q shadows the declaration at %s", nf.Name, outer.NamePos)
 				break
@@ -125,7 +125,7 @@ func (c *flowChecker) checkStep(f *Flow, step Step, chain []*Flow) {
 // steps map; cross-scope transitions are not permitted.
 func (c *flowChecker) checkNext(f *Flow, n Name) {
 	if _, ok := f.StepByName(n.Value); !ok {
-		c.report(CodeUnresolvedStep, n.Pos,
+		c.reportPath(CodeUnresolvedStep, n.Pos,
 			renderPath(c.path, "next"),
 			"next names unknown Step %q", n.Value)
 	}
@@ -166,7 +166,6 @@ func (c *flowChecker) checkCall(f *Flow, call *Call, chain []*Flow) {
 			}
 		}
 		c.report(CodeUnresolvedFlow, target.Pos,
-			renderPath(c.path, ""),
 			"flow name %q resolves to no flows entry in scope", target.Value)
 		return
 	}
@@ -198,7 +197,7 @@ func (c *flowChecker) detectCycles() {
 		for _, e := range c.edges[f] {
 			switch state[e.to] {
 			case visiting:
-				c.report(CodeFlowCycle, e.pos, e.path,
+				c.reportPath(CodeFlowCycle, e.pos, e.path,
 					"flow references form a cycle: %s", c.cycleNames(stack, e.to))
 			case unvisited:
 				visit(e.to)

@@ -61,9 +61,13 @@ func (f *Flow) FlowByName(name string) (NamedFlow, bool) {
 
 // Step is a Step definition: one of the seven action variants. The set is
 // closed; consumers dispatch by type switch over *CallStep, *GatherStep,
-// *MatchStep, *PassStep, *SleepStep, *ReturnStep, and *RaiseStep.
+// *MatchStep, *PassStep, *SleepStep, *ReturnStep, and *RaiseStep. Action
+// returns the variant's action discriminator as written in the source
+// ("Call", "Gather", ...), for consumers that render or re-emit a Step
+// rather than dispatch on it.
 type Step interface {
 	isStep()
+	Action() string
 }
 
 func (*CallStep) isStep()   {}
@@ -73,6 +77,14 @@ func (*PassStep) isStep()   {}
 func (*SleepStep) isStep()  {}
 func (*ReturnStep) isStep() {}
 func (*RaiseStep) isStep()  {}
+
+func (*CallStep) Action() string   { return "Call" }
+func (*GatherStep) Action() string { return "Gather" }
+func (*MatchStep) Action() string  { return "Match" }
+func (*PassStep) Action() string   { return "Pass" }
+func (*SleepStep) Action() string  { return "Sleep" }
+func (*ReturnStep) Action() string { return "Return" }
+func (*RaiseStep) Action() string  { return "Raise" }
 
 // CallStep dispatches a single call and routes on the Result it yields.
 type CallStep struct {

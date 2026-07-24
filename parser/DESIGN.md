@@ -398,10 +398,14 @@ a compile error at the consumer's site.
 
 The rule draws the boundary: a closed set is published when its values survive
 into the AST as string data, and not when the AST encodes the set as types. The
-Step `action` values get no constants because no consumer ever holds one as a
-string — the discriminator becomes the variant struct, and a type switch already
-gives the compiler something to check. A constant with no comparison site
-protects nothing.
+Step `action` values get no constants because no consumer compares against one
+as a string — the discriminator becomes the variant struct, and a type switch
+already gives the compiler something to check. A constant with no comparison
+site protects nothing. Consumers that render or re-emit a Step do need the
+source spelling back, so the `Step` interface carries it as an `Action() string`
+method each variant implements: the discriminator travels with the variant, and
+a new variant without one fails to compile rather than surfacing as a missing
+entry in some consumer's table.
 
 Two properties keep the constants honest. The bind pass validates against the
 same identifiers it publishes, so the enforced set and the published set cannot

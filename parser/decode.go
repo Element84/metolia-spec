@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"sort"
-	"strings"
 )
 
 // decode is the well-formedness layer: it reads src token by token into a
@@ -38,19 +37,19 @@ func decode(src []byte, filename string) (*Value, Diagnostics) {
 			d.syntaxError(err)
 		} else {
 			pos := d.position(d.tokenStart(before))
-			d.errorAt(CodeTrailingContent, pos, "", "unexpected content after the root value")
+			d.report(CodeTrailingContent, pos, "unexpected content after the root value")
 		}
 	}
 	return root, d.diags
 }
 
 type decoder struct {
+	reporter
+
 	src   []byte
 	dec   *json.Decoder
 	file  string
 	index *lineIndex
-	path  []pathSeg
-	diags Diagnostics
 }
 
 // readValue reads one complete JSON value, including nested structure.
@@ -93,9 +92,9 @@ func (d *decoder) object(pos Position) (*Value, error) {
 		name := tok.(string) // object keys are always strings
 		namePos := d.position(d.tokenStart(before))
 
-		d.path = append(d.path, pathSeg{key: name})
+		d.pushKey(name)
 		val, err := d.readValue()
-		d.path = d.path[:len(d.path)-1]
+		d.pop()
 		if err != nil {
 			return nil, err
 		}
@@ -104,7 +103,7 @@ func (d *decoder) object(pos Position) (*Value, error) {
 			seen = make(map[string]Position)
 		}
 		if first, dup := seen[name]; dup {
-			d.errorAt(CodeDuplicateMember, namePos, renderPath(d.path, name),
+			d.reportPath(CodeDuplicateMember, namePos, renderPath(d.path, name),
 				"duplicate object member %q; first defined at %s", name, first)
 			continue
 		}
@@ -121,9 +120,9 @@ func (d *decoder) object(pos Position) (*Value, error) {
 func (d *decoder) array(pos Position) (*Value, error) {
 	v := &Value{Kind: KindArray, Pos: pos}
 	for d.dec.More() {
-		d.path = append(d.path, pathSeg{idx: len(v.Array), isIdx: true})
+		d.pushIdx(len(v.Array))
 		elem, err := d.readValue()
-		d.path = d.path[:len(d.path)-1]
+		d.pop()
 		if err != nil {
 			return nil, err
 		}
@@ -158,16 +157,6 @@ func (d *decoder) position(offset int) Position {
 	return Position{Filename: d.file, Offset: offset, Line: line, Column: col}
 }
 
-func (d *decoder) errorAt(code string, pos Position, path string, format string, args ...any) {
-	d.diags = append(d.diags, Diagnostic{
-		Severity: severityOf(code),
-		Code:     code,
-		Pos:      pos,
-		Path:     path,
-		Message:  fmt.Sprintf(format, args...),
-	})
-}
-
 // syntaxError converts a Decoder error into a diagnostic.
 func (d *decoder) syntaxError(err error) {
 	var syn *json.SyntaxError
@@ -175,49 +164,15 @@ func (d *decoder) syntaxError(err error) {
 	// The Decoder reports plain io.EOF both for an empty document and for
 	// input truncated between tokens; the source tells the two apart.
 	case errors.Is(err, io.EOF) && len(bytes.TrimSpace(d.src)) == 0:
-		d.errorAt(CodeEmptyDocument, d.position(0), "",
-			"the document is empty")
+		d.report(CodeEmptyDocument, d.position(0), "the document is empty")
 	case errors.Is(err, io.EOF), errors.Is(err, io.ErrUnexpectedEOF):
-		d.errorAt(CodeJSONSyntax, d.position(len(d.src)), "",
-			"unexpected end of input")
+		d.report(CodeJSONSyntax, d.position(len(d.src)), "unexpected end of input")
 	case errors.As(err, &syn):
 		offset := min(int(syn.Offset), len(d.src))
-		d.errorAt(CodeJSONSyntax, d.position(offset), "", "%s", syn.Error())
+		d.report(CodeJSONSyntax, d.position(offset), "%s", syn.Error())
 	default:
-		d.errorAt(CodeJSONSyntax, d.position(0), "", "%s", err.Error())
+		d.report(CodeJSONSyntax, d.position(0), "%s", err.Error())
 	}
-}
-
-// pathSeg is one segment of a document path: an object member name or an
-// array index.
-type pathSeg struct {
-	key   string
-	idx   int
-	isIdx bool
-}
-
-// renderPath renders segments as a dotted path with bracketed indexes,
-// e.g. "steps.greet.catch[0]". A non-empty finalKey is appended as a last
-// member segment.
-func renderPath(segs []pathSeg, finalKey string) string {
-	var b strings.Builder
-	writeKey := func(key string) {
-		if b.Len() > 0 {
-			b.WriteByte('.')
-		}
-		b.WriteString(key)
-	}
-	for _, s := range segs {
-		if s.isIdx {
-			fmt.Fprintf(&b, "[%d]", s.idx)
-		} else {
-			writeKey(s.key)
-		}
-	}
-	if finalKey != "" {
-		writeKey(finalKey)
-	}
-	return b.String()
 }
 
 // lineIndex translates byte offsets into 1-based line and column numbers.

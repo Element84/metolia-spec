@@ -163,3 +163,66 @@ func (ds Diagnostics) HasErrors() bool {
 	}
 	return false
 }
+
+// pathSeg is one segment of a document path: an object member name or an
+// array index.
+type pathSeg struct {
+	key   string
+	idx   int
+	isIdx bool
+}
+
+// renderPath renders segments as a dotted path with bracketed indexes,
+// e.g. "steps.greet.catch[0]". A non-empty finalKey is appended as a last
+// member segment.
+func renderPath(segs []pathSeg, finalKey string) string {
+	var b strings.Builder
+	writeKey := func(key string) {
+		if b.Len() > 0 {
+			b.WriteByte('.')
+		}
+		b.WriteString(key)
+	}
+	for _, s := range segs {
+		if s.isIdx {
+			fmt.Fprintf(&b, "[%d]", s.idx)
+		} else {
+			writeKey(s.key)
+		}
+	}
+	if finalKey != "" {
+		writeKey(finalKey)
+	}
+	return b.String()
+}
+
+// reporter accumulates a pass's diagnostics and the document path of its
+// walk. Every pass carries one: the decoder and binder embed it directly,
+// the checkers embed it beside their own state.
+type reporter struct {
+	diags Diagnostics
+	path  []pathSeg
+}
+
+func (r *reporter) pushKey(name string) { r.path = append(r.path, pathSeg{key: name}) }
+func (r *reporter) pushIdx(i int)       { r.path = append(r.path, pathSeg{idx: i, isIdx: true}) }
+func (r *reporter) pop()                { r.path = r.path[:len(r.path)-1] }
+
+// report records one finding at the walk's current path; the severity is
+// the code's own.
+func (r *reporter) report(code string, pos Position, format string, args ...any) {
+	r.reportPath(code, pos, renderPath(r.path, ""), format, args...)
+}
+
+// reportPath records one finding at an explicitly rendered path, for sites
+// where the path is not the walk's current one: a final member segment
+// appended, or an edge recorded on an earlier walk.
+func (r *reporter) reportPath(code string, pos Position, path, format string, args ...any) {
+	r.diags = append(r.diags, Diagnostic{
+		Severity: severityOf(code),
+		Code:     code,
+		Pos:      pos,
+		Path:     path,
+		Message:  fmt.Sprintf(format, args...),
+	})
+}

@@ -48,14 +48,13 @@ so one parse reports every shape problem in the document, not just the first.
 
 ### check
 
-The check pass (`check.go`, plus `check_flow.go` and `check_provider.go`) runs
-the rules that span the bound document: every `entrypoint` and `next` resolves
-to a step, every flow name resolves on its lexical scope chain, and the
-flow-reference graph is acyclic; for providers, the failure catalog and
-structural declarations are examined. The parser's warnings — flow shadowing,
-catalog entries outside the provider's prefix, structural names matching no
-parameter — all come from this pass. It assumes an AST that bound without errors
-and is skipped otherwise.
+The check pass (`check_flow.go` and `check_provider.go`) runs the rules that
+span the bound document: every `entrypoint` and `next` resolves to a step, every
+flow name resolves on its lexical scope chain, and the flow-reference graph is
+acyclic; for providers, the failure catalog and structural declarations are
+examined. The parser's warnings — flow shadowing, catalog entries outside the
+provider's prefix, structural names matching no parameter — all come from this
+pass. It assumes an AST that bound without errors and is skipped otherwise.
 
 ## The contract
 
@@ -68,16 +67,16 @@ nil field means the member was absent from the document.
 
 ## File map
 
-| Files                                            | Role                                                                |
-| ------------------------------------------------ | ------------------------------------------------------------------- |
-| `parser.go`                                      | `ParseFlow` / `ParseProvider`: run the passes, sort the diagnostics |
-| `decode.go`, `value.go`                          | the decode pass and the positioned JSON tree it produces            |
-| `bind.go`, `bind_flow.go`, `bind_provider.go`    | the bind pass: shared machinery, then one file per document kind    |
-| `check.go`, `check_flow.go`, `check_provider.go` | the check pass, same split                                          |
-| `ast.go`, `ast_flow.go`, `ast_provider.go`       | the typed AST: shared shapes, the Flow tree, the Provider tree      |
-| `diagnostic.go`                                  | severities, the full code enumeration, positions                    |
-| `expr.go`                                        | `ExprBody`: the specification's expression-embedding rule           |
-| `doc.go`                                         | package documentation                                               |
+| Files                                         | Role                                                                                 |
+| --------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `parser.go`                                   | `ParseFlow` / `ParseProvider`: run the passes, sort the diagnostics                  |
+| `decode.go`, `value.go`                       | the decode pass and the positioned JSON tree it produces                             |
+| `bind.go`, `bind_flow.go`, `bind_provider.go` | the bind pass: shared field shapes, then one file per document kind                  |
+| `check_flow.go`, `check_provider.go`          | the check pass, one file per document kind                                           |
+| `ast.go`, `ast_flow.go`, `ast_provider.go`    | the typed AST: shared shapes, the Flow tree, the Provider tree                       |
+| `diagnostic.go`                               | severities, the full code enumeration, positions, the reporter every pass walks with |
+| `expr.go`                                     | `ExprBody`: the specification's expression-embedding rule                            |
+| `doc.go`                                      | package documentation                                                                |
 
 ## What it deliberately does not do
 

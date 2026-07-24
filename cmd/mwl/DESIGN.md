@@ -174,14 +174,14 @@ The implementation derives the bulk of the encoding from the AST structs by
 reflection: field names are camelCased, nil pointers and empty slices are
 omitted (which collapses the pair types to their one-key form on its own), and
 unexported fields are invisible. Hand-written code is reserved for the decisions
-the struct shapes cannot express: the action discriminator, position rendering,
-value trees with classified leaves, the explicit-null pair types, and the key
-rules below. Two consequences follow. A field added to an AST struct appears in
-the output with no encoder change, surfacing as a golden-file diff for review,
-and a new Step variant fails tests until its discriminator is mapped. And
-because keys derive from Go field names, renaming an AST field changes the
-output contract—the goldens catch it, but a rename is an encoding change, not an
-internal refactor.
+the struct shapes cannot express: position rendering, value trees with
+classified leaves, the explicit-null pair types, and the key rules below; the
+action discriminator comes from the variant itself (`Step.Action`), not from a
+table here. Two consequences follow. A field added to an AST struct appears in
+the output with no encoder change, and a new Step variant encodes without one
+either, each surfacing as a golden-file diff for review. And because keys derive
+from Go field names, renaming an AST field changes the output contract—the
+goldens catch it, but a rename is an encoding change, not an internal refactor.
 
 - **Positions** are `{ "line": 6, "col": 5, "offset": 112 }` on every node, keys
   always in that order. Line and col are 1-based, col counts bytes; offset is
