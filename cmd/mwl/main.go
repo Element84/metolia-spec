@@ -43,7 +43,8 @@ a clean parse prints nothing. "-" reads the document from stdin.
 
 Flags:
   --ast     emit a {"filename", "ast", "diagnostics"} JSON envelope on
-            stdout; "ast" is null when the parse failed
+            stdout; "ast" is null when the parse failed; "filename" is
+            omitted for stdin
   --strict  exit 1 on any diagnostic, warnings included
 
 Exit codes:
