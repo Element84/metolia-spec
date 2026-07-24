@@ -147,10 +147,13 @@
 
        Sections render in .Pages.ByWeight order. The section _index.md weights
        (guide=10, reference=20, rationale=30) give the canonical reading order
-       Guide -> Reference -> Rationale, matching the site navigation. */ -}}
+       Guide -> Reference -> Rationale, matching the site navigation. Sections
+       with singleFileExclude in frontmatter (tools=25) are omitted: they
+       document an implementation, not the language. */ -}}
 # {{ .Title }}
 
 {{ range .Pages.ByWeight -}}
+{{- if .Params.singleFileExclude -}}{{- continue -}}{{- end -}}
 {{- $section := . -}}
 {{- $prefix := anchorize $section.File.ContentBaseName -}}
 {{- /* The section _index.md body. Strip TOC blocks, then anchor its headings as

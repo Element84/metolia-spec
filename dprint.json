@@ -8,6 +8,7 @@
     "lineWidth": 80
   },
   "excludes": [
+    "content/tools/ast-explorer.md",
     "cmd/mwl/testdata/",
     "public/",
     "resources/",

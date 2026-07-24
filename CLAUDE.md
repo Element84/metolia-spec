@@ -52,6 +52,7 @@ they run the same checks the pre-commit hook runs, in the right order.
 hugo serve                          # local preview at http://localhost:1313/ with live reload
 bash scripts/check-build.sh         # hugo build + spec-link check + HTML anchor check (all post-build checks)
 bash scripts/check-schemas.sh       # validate the JSON Schemas, instance fixtures, and conformance cases
+python3 scripts/check-explorer.py   # AST explorer page ↔ parser AST declarations drift check
 dprint fmt                          # format all Markdown/JSON
 dprint check                        # verify formatting without writing
 lefthook install                    # install the pre-commit hook
@@ -60,7 +61,8 @@ go build ./cmd/mwl/                 # build the mwl CLI (produces ./mwl)
 ```
 
 `check-schemas.sh` requires `check-jsonschema`
-(`brew install check-jsonschema`).
+(`brew install check-jsonschema`). `check-explorer.py` requires Python 3.10+
+(its module-level type annotations are evaluated at import).
 
 The CLI's tests compare output byte-for-byte against golden files in
 `cmd/mwl/testdata/golden/`. After a deliberate output-format change, regenerate
@@ -68,10 +70,11 @@ them with `go test ./... -update` (run in `cmd/mwl/`) and review the diff.
 `cmd/mwl/testdata/` is excluded from dprint on purpose: the golden files bake in
 the fixtures' byte offsets, so reformatting either side breaks the comparison.
 
-The pre-commit hook (see `lefthook.yml`) runs three checks against the staged
-index: `dprint fmt --fail-on-change`, `check-schemas.sh`, and `check-build.sh`.
-The dprint command has `stage_fixed: false` — formatting edits land in the
-working tree but are not auto-staged. Review and stage them yourself.
+The pre-commit hook (see `lefthook.yml`) runs four checks against the staged
+index: `dprint fmt --fail-on-change`, `check-schemas.sh`, `check-explorer.py`,
+and `check-build.sh`. The dprint command has `stage_fixed: false` — formatting
+edits land in the working tree but are not auto-staged. Review and stage them
+yourself.
 
 ## Single-file spec output
 
@@ -96,10 +99,16 @@ frontmatter, which causes the template to strip "In this document", "In this
 section", and "Key terms" H2 blocks (TOC-shaped lists that were navigation aids
 for the multi-page site and are redundant in the flat file).
 
+The whole-site rendering (`public/spec.md`, generated from the home page's
+SpecMarkdown output) concatenates the top-level sections the same way. A section
+with `singleFileExclude: true` in its `_index.md` frontmatter is omitted from it
+— `content/tools/` sets this, since tooling docs (and the AST explorer's raw
+HTML in particular) describe an implementation, not the language.
+
 ## Architecture of the content
 
-The specification is split into three top-level sections under `content/`, each
-a Hugo section with its own `_index.md`:
+The site is split into four top-level sections under `content/`, each a Hugo
+section with its own `_index.md`:
 
 - `content/guide/` — learning material (introduction, why MWL, by-example tour,
   cookbook patterns, end-to-end example). Non-normative.
@@ -109,11 +118,18 @@ a Hugo section with its own `_index.md`:
   middleware mechanics, providers, conformance, failure-code reference, and a
   glossary. Most entries are single pages; `providers/` is a folder of per-topic
   pages with its own `_index.md`.
+- `content/tools/` — documentation for the Go tooling (parser, `mwl` CLI,
+  eventual linter/validator). Non-normative; describes one implementation, not
+  the language. `ast-explorer.md` mixes markdown headings with raw interactive
+  HTML (excluded from dprint); its `data-field` attributes name the `parser`
+  struct fields each row documents, and `scripts/check-explorer.py` diffs them
+  against the parser's AST declarations (`ast_flow.go`, `ast_provider.go`,
+  `ast.go`, `value.go`, and `Position` from `diagnostic.go`).
 - `content/rationale/` — design principles, non-goals, architecture &
   motivation, changelog. Explains _why_, not _what_.
 
-The navigation order across the site is Guide → Reference → Rationale, set in
-`hugo.yaml` under `menu.main`.
+The navigation order across the site is Guide → Reference → Tooling → Rationale,
+set in `hugo.yaml` under `menu.main`.
 
 ## Authoring conventions
 

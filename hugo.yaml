@@ -79,6 +79,10 @@ menu:
       name: Reference
       pageRef: /reference
       weight: 10
+    - identifier: tools
+      name: Tooling
+      pageRef: /tools
+      weight: 12
     - identifier: rationale
       name: Rationale
       pageRef: /rationale

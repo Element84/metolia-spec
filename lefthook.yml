@@ -7,5 +7,8 @@ pre-commit:
     schemas:
       glob: "*.json"
       run: bash scripts/check-staged.sh -- '$SCRIPTS_DIR/check-schemas.sh'
+    explorer:
+      glob: "*.{go,md,py}"
+      run: bash scripts/check-staged.sh -- 'python3 $SCRIPTS_DIR/check-explorer.py'
     build:
       run: bash scripts/check-staged.sh -- '$SCRIPTS_DIR/check-build.sh'

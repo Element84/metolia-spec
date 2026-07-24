@@ -31,8 +31,8 @@ echo "== Spec link check: whole-site spec"
 bash "$SCRIPTS_DIR/check-spec-links.sh" --self-contained public/spec.md
 
 echo
-echo "== HTML anchor check: reference"
-python3 "$SCRIPTS_DIR/check-html-anchors.py" reference
+echo "== HTML anchor check: reference, tools"
+python3 "$SCRIPTS_DIR/check-html-anchors.py" reference tools
 
 echo
 echo "All checks passed."
