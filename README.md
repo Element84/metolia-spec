@@ -26,7 +26,7 @@ of two modules:
 
 - `parser/` — the MWL parser: a zero-dependency Go module implementing the
   three-pass parse (decode, bind, check) with positioned diagnostics.
-- `cmd/mwl/` — the `mwl` command-line tool, currently `mwl parse`. Usage and
+- `cmd/mwl/` — the MWL command-line tool, currently `mwl parse`. Usage and
   development notes are in `cmd/mwl/README.md`.
 
 ## Future goals

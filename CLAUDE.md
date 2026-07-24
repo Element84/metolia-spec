@@ -12,7 +12,7 @@ wait, and handle failures) — plus Go tooling for the language. The rendered
 specification site under `public/` is the primary deliverable; the Hextra theme
 is loaded as a Go module. A Go workspace (`go.work`) holds two modules:
 `parser/` (the zero-dependency MWL parser; decisions in `parser/DESIGN.md`) and
-`cmd/mwl/` (the `mwl` CLI; decisions in `cmd/mwl/DESIGN.md`, usage in
+`cmd/mwl/` (the MWL CLI; decisions in `cmd/mwl/DESIGN.md`, usage in
 `cmd/mwl/README.md`).
 
 ## ⚠️ Spec changes REQUIRE a schema and test review
@@ -57,7 +57,7 @@ dprint fmt                          # format all Markdown/JSON
 dprint check                        # verify formatting without writing
 lefthook install                    # install the pre-commit hook
 go test ./parser/ ./cmd/mwl/        # parser and CLI test suites
-go build ./cmd/mwl/                 # build the mwl CLI (produces ./mwl)
+go build ./cmd/mwl/                 # build the MWL CLI (produces ./mwl)
 ```
 
 `check-schemas.sh` requires `check-jsonschema`
@@ -118,13 +118,13 @@ section with its own `_index.md`:
   middleware mechanics, providers, conformance, failure-code reference, and a
   glossary. Most entries are single pages; `providers/` is a folder of per-topic
   pages with its own `_index.md`.
-- `content/tools/` — documentation for the Go tooling (parser, `mwl` CLI,
-  eventual linter/validator). Non-normative; describes one implementation, not
-  the language. `ast-explorer.md` mixes markdown headings with raw interactive
-  HTML (excluded from dprint); its `data-field` attributes name the `parser`
-  struct fields each row documents, and `scripts/check-explorer.py` diffs them
-  against the parser's AST declarations (`ast_flow.go`, `ast_provider.go`,
-  `ast.go`, `value.go`, and `Position` from `diagnostic.go`).
+- `content/tools/` — documentation for the Go tooling (parser, MWL CLI, eventual
+  linter/validator). Non-normative; describes one implementation, not the
+  language. `ast-explorer.md` mixes markdown headings with raw interactive HTML
+  (excluded from dprint); its `data-field` attributes name the `parser` struct
+  fields each row documents, and `scripts/check-explorer.py` diffs them against
+  the parser's AST declarations (`ast_flow.go`, `ast_provider.go`, `ast.go`,
+  `value.go`, and `Position` from `diagnostic.go`).
 - `content/rationale/` — design principles, non-goals, architecture &
   motivation, changelog. Explains _why_, not _what_.
 
@@ -212,6 +212,12 @@ In **prose**, the same principle extends to concept nouns: when a word names a
 - **Backticks** whenever the word is a literal field key or binding regardless
   of the above — `steps`, `middleware` (the field), `provider` (the field),
   `flow` (the call field). The backtick form always uses the JSON casing.
+- **The language vs the command**: MWL (caps, never code font) is the language,
+  and the attributive form for the tool in prose and titles — "the MWL CLI",
+  "the MWL command-line tool". `mwl` (lowercase, always code font) is the
+  literal command or binary, used only where the executable itself is meant
+  (`mwl parse`, `./mwl`, "a single `mwl` binary"). Bare lowercase "mwl" with
+  neither treatment is never correct.
 
 ### Headings and titles
 

@@ -1,4 +1,4 @@
-# mwl
+# `mwl`
 
 The command-line tool for the Metolia Workflow Language. It parses a workflow or
 provider definition and reports diagnostics, optionally emitting the parsed AST

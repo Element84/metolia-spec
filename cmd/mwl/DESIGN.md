@@ -1,9 +1,9 @@
 # CLI design decisions
 
-The companion to `parser/DESIGN.md` for the `mwl` command-line tool. Same
-charter: a working document, not a formal decision log. Entries record what was
-decided and why and are revised as the design changes; a decision that hardens
-may later graduate to its own record.
+The companion to `parser/DESIGN.md` for the MWL command-line tool. Same charter:
+a working document, not a formal decision log. Entries record what was decided
+and why and are revised as the design changes; a decision that hardens may later
+graduate to its own record.
 
 ## Decisions at a glance
 
