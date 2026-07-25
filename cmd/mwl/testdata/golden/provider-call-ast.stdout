@@ -1,0 +1,348 @@
+{
+  "filename": "testdata/provider/call.json",
+  "ast": {
+    "$schema": "https://mwl.dev/v0.1/provider/schema.json",
+    "uri": {
+      "value": "mwl:provider.call/example/echo/v1",
+      "pos": {
+        "line": 3,
+        "col": 10,
+        "offset": 69
+      }
+    },
+    "codePrefix": {
+      "value": "Echo",
+      "pos": {
+        "line": 4,
+        "col": 17,
+        "offset": 122
+      }
+    },
+    "description": "Produces its input as its success value.",
+    "call": {
+      "parameters": {
+        "kind": "object",
+        "members": [
+          {
+            "name": "type",
+            "namePos": {
+              "line": 7,
+              "col": 5,
+              "offset": 213
+            },
+            "value": {
+              "kind": "string",
+              "value": "object",
+              "pos": {
+                "line": 7,
+                "col": 13,
+                "offset": 221
+              }
+            }
+          },
+          {
+            "name": "additionalProperties",
+            "namePos": {
+              "line": 8,
+              "col": 5,
+              "offset": 235
+            },
+            "value": {
+              "kind": "bool",
+              "value": false,
+              "pos": {
+                "line": 8,
+                "col": 29,
+                "offset": 259
+              }
+            }
+          },
+          {
+            "name": "required",
+            "namePos": {
+              "line": 9,
+              "col": 5,
+              "offset": 270
+            },
+            "value": {
+              "kind": "array",
+              "elements": [
+                {
+                  "kind": "string",
+                  "value": "value",
+                  "pos": {
+                    "line": 9,
+                    "col": 18,
+                    "offset": 283
+                  }
+                }
+              ],
+              "pos": {
+                "line": 9,
+                "col": 17,
+                "offset": 282
+              }
+            }
+          },
+          {
+            "name": "properties",
+            "namePos": {
+              "line": 10,
+              "col": 5,
+              "offset": 297
+            },
+            "value": {
+              "kind": "object",
+              "members": [
+                {
+                  "name": "value",
+                  "namePos": {
+                    "line": 11,
+                    "col": 7,
+                    "offset": 319
+                  },
+                  "value": {
+                    "kind": "object",
+                    "members": [
+                      {
+                        "name": "description",
+                        "namePos": {
+                          "line": 11,
+                          "col": 18,
+                          "offset": 330
+                        },
+                        "value": {
+                          "kind": "string",
+                          "value": "The value to produce.",
+                          "pos": {
+                            "line": 11,
+                            "col": 33,
+                            "offset": 345
+                          }
+                        }
+                      }
+                    ],
+                    "pos": {
+                      "line": 11,
+                      "col": 16,
+                      "offset": 328
+                    }
+                  }
+                },
+                {
+                  "name": "uppercase",
+                  "namePos": {
+                    "line": 12,
+                    "col": 7,
+                    "offset": 378
+                  },
+                  "value": {
+                    "kind": "object",
+                    "members": [
+                      {
+                        "name": "type",
+                        "namePos": {
+                          "line": 12,
+                          "col": 22,
+                          "offset": 393
+                        },
+                        "value": {
+                          "kind": "string",
+                          "value": "boolean",
+                          "pos": {
+                            "line": 12,
+                            "col": 30,
+                            "offset": 401
+                          }
+                        }
+                      },
+                      {
+                        "name": "description",
+                        "namePos": {
+                          "line": 12,
+                          "col": 41,
+                          "offset": 412
+                        },
+                        "value": {
+                          "kind": "string",
+                          "value": "Uppercase string values.",
+                          "pos": {
+                            "line": 12,
+                            "col": 56,
+                            "offset": 427
+                          }
+                        }
+                      }
+                    ],
+                    "pos": {
+                      "line": 12,
+                      "col": 20,
+                      "offset": 391
+                    }
+                  }
+                }
+              ],
+              "pos": {
+                "line": 10,
+                "col": 19,
+                "offset": 311
+              }
+            }
+          }
+        ],
+        "pos": {
+          "line": 6,
+          "col": 17,
+          "offset": 207
+        }
+      }
+    },
+    "metadata": {
+      "kind": "object",
+      "members": [
+        {
+          "name": "type",
+          "namePos": {
+            "line": 16,
+            "col": 5,
+            "offset": 487
+          },
+          "value": {
+            "kind": "string",
+            "value": "object",
+            "pos": {
+              "line": 16,
+              "col": 13,
+              "offset": 495
+            }
+          }
+        },
+        {
+          "name": "additionalProperties",
+          "namePos": {
+            "line": 17,
+            "col": 5,
+            "offset": 509
+          },
+          "value": {
+            "kind": "bool",
+            "value": false,
+            "pos": {
+              "line": 17,
+              "col": 29,
+              "offset": 533
+            }
+          }
+        },
+        {
+          "name": "properties",
+          "namePos": {
+            "line": 18,
+            "col": 5,
+            "offset": 544
+          },
+          "value": {
+            "kind": "object",
+            "members": [
+              {
+                "name": "echoedAt",
+                "namePos": {
+                  "line": 19,
+                  "col": 7,
+                  "offset": 566
+                },
+                "value": {
+                  "kind": "object",
+                  "members": [
+                    {
+                      "name": "type",
+                      "namePos": {
+                        "line": 19,
+                        "col": 21,
+                        "offset": 580
+                      },
+                      "value": {
+                        "kind": "string",
+                        "value": "string",
+                        "pos": {
+                          "line": 19,
+                          "col": 29,
+                          "offset": 588
+                        }
+                      }
+                    },
+                    {
+                      "name": "description",
+                      "namePos": {
+                        "line": 19,
+                        "col": 39,
+                        "offset": 598
+                      },
+                      "value": {
+                        "kind": "string",
+                        "value": "When the echo resolved.",
+                        "pos": {
+                          "line": 19,
+                          "col": 54,
+                          "offset": 613
+                        }
+                      }
+                    }
+                  ],
+                  "pos": {
+                    "line": 19,
+                    "col": 19,
+                    "offset": 578
+                  }
+                }
+              }
+            ],
+            "pos": {
+              "line": 18,
+              "col": 19,
+              "offset": 558
+            }
+          }
+        }
+      ],
+      "pos": {
+        "line": 15,
+        "col": 15,
+        "offset": 481
+      }
+    },
+    "failureCatalog": {
+      "closed": [
+        {
+          "value": "Provider.Call.Echo.ValueTooLarge",
+          "pos": {
+            "line": 23,
+            "col": 16,
+            "offset": 689
+          }
+        }
+      ],
+      "open": [
+        {
+          "value": "Provider.Call.Echo.Backend.*",
+          "pos": {
+            "line": 24,
+            "col": 14,
+            "offset": 739
+          }
+        }
+      ],
+      "pos": {
+        "line": 22,
+        "col": 21,
+        "offset": 672
+      }
+    },
+    "pos": {
+      "line": 1,
+      "col": 1,
+      "offset": 0
+    }
+  },
+  "diagnostics": []
+}

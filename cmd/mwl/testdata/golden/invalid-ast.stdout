@@ -1,0 +1,17 @@
+{
+  "filename": "testdata/flow/invalid-unresolved.json",
+  "ast": null,
+  "diagnostics": [
+    {
+      "severity": "error",
+      "code": "unresolved-step",
+      "path": "steps.work.next",
+      "message": "next names unknown Step \"finish\"",
+      "pos": {
+        "line": 9,
+        "col": 15,
+        "offset": 284
+      }
+    }
+  ]
+}

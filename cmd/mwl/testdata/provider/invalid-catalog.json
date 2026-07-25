@@ -1,0 +1,11 @@
+{
+  "$schema": "https://mwl.dev/v0.1/provider/schema.json",
+  "uri": "mwl:provider.call/example/echo/v1",
+  "codePrefix": "echo",
+  "description": "Rejected: a lowercase codePrefix and a closed code that stops at the prefix segment.",
+  "parameters": { "type": "object" },
+  "failureCatalog": {
+    "closed": ["Provider.Call.Echo"],
+    "open": []
+  }
+}

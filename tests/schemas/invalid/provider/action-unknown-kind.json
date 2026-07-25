@@ -1,0 +1,13 @@
+{
+  "$schema": "https://mwl.dev/v0.1/provider/schema.json",
+  "uri": "mwl:provider.middleware/example/trace/v1",
+  "codePrefix": "Trace",
+  "description": "Invalid: the action kind is outside the three action kinds (side-effect, control, transform).",
+  "attachment": ["step"],
+  "phases": {
+    "onEntry": {
+      "action": { "kind": "observer", "description": "Watches entry." }
+    }
+  },
+  "failureCatalog": { "closed": [], "open": [] }
+}

@@ -1,0 +1,9 @@
+go 1.26
+
+// The parser module and the CLI participate in the workspace. The root go.mod
+// exists solely to load the Hextra theme as a Hugo module and builds no Go
+// packages.
+use (
+	./cmd/mwl
+	./parser
+)

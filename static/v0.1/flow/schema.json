@@ -566,12 +566,12 @@
     "callProviderUri": {
       "description": "A call-provider URI under the mwl scheme: mwl:provider.call/<namespace>/<name...>. Segments MUST NOT be \".\" or \"..\".",
       "type": "string",
-      "pattern": "^mwl:provider\\.call/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$"
+      "pattern": "^mwl:provider\\.call/(?!\\.\\.?(?:/|$))[A-Za-z0-9._-]+/(?!\\.\\.?(?:/|$))[A-Za-z0-9._-]+(/(?!\\.\\.?(?:/|$))[A-Za-z0-9._-]+)*$"
     },
     "middlewareProviderUri": {
       "description": "A middleware-provider URI under the mwl scheme: mwl:provider.middleware/<namespace>/<name...>. Segments MUST NOT be \".\" or \"..\".",
       "type": "string",
-      "pattern": "^mwl:provider\\.middleware/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*$"
+      "pattern": "^mwl:provider\\.middleware/(?!\\.\\.?(?:/|$))[A-Za-z0-9._-]+/(?!\\.\\.?(?:/|$))[A-Za-z0-9._-]+(/(?!\\.\\.?(?:/|$))[A-Za-z0-9._-]+)*$"
     },
     "parametersSchema": {
       "description": "A JSON Schema (2020-12) document describing named parameters. MUST have \"type\": \"object\" at the top level. Validation against it is closed by default: absent additionalProperties is evaluated as false.",

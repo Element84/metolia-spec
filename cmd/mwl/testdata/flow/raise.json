@@ -1,0 +1,17 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Conformance 210: Raise constructs a failure envelope from nothing.",
+  "entrypoint": "reject",
+  "steps": {
+    "reject": {
+      "action": "Raise",
+      "result": {
+        "type": "error",
+        "code": "Conformance.Rejected",
+        "message": "rejected by policy",
+        "details": { "reason": "conformance" },
+        "retryable": false
+      }
+    }
+  }
+}

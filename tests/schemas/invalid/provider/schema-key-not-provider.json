@@ -1,0 +1,8 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "uri": "mwl:provider.call/example/echo/v1",
+  "codePrefix": "Echo",
+  "description": "Invalid: $schema names the flow schema, not the provider schema.",
+  "parameters": { "type": "object" },
+  "failureCatalog": { "closed": [], "open": [] }
+}

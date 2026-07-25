@@ -1,0 +1,22 @@
+{
+  "$schema": "https://mwl.dev/v0.1/flow/schema.json",
+  "comment": "Golden fixture: the iterate Gather form with completion, concurrency, and catch.",
+  "entrypoint": "notify-all",
+  "steps": {
+    "notify-all": {
+      "action": "Gather",
+      "over": "{{ vars.recipients }}",
+      "call": {
+        "provider": "mwl:provider.call/mwl/mock/v1",
+        "with": { "to": "{{ call.item }}", "subject": "hello" }
+      },
+      "completion": { "successes": 1, "wait": false },
+      "concurrency": 2,
+      "catch": [
+        { "match": { "codes": ["*"] }, "next": "done" }
+      ],
+      "next": "done"
+    },
+    "done": { "action": "Return" }
+  }
+}

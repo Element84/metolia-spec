@@ -1,0 +1,42 @@
+{
+  "$schema": "https://mwl.dev/v0.1/provider/schema.json",
+  "uri": "mwl:provider.middleware/example/audit/v1",
+  "codePrefix": "Audit",
+  "description": "Records entries and exits, and may substitute a success for a matching failure.",
+  "attachment": ["step", "flow"],
+  "phases": {
+    "onEntry": {
+      "action": {
+        "kind": "side-effect",
+        "description": "Records the entry."
+      },
+      "parameters": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "template": { "type": "object", "description": "The record template, taken structurally." },
+          "level": { "type": "string", "description": "The record level." }
+        }
+      },
+      "structural": ["template"]
+    },
+    "onFailure": {
+      "action": {
+        "kind": "control",
+        "description": "May substitute a success for a matching failure.",
+        "acceptance": "The rising failure is committed once the action declines it."
+      }
+    }
+  },
+  "metadata": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "records": { "type": "number", "description": "Records written so far." }
+    }
+  },
+  "failureCatalog": {
+    "closed": ["Provider.Middleware.Audit.SinkUnavailable"],
+    "open": []
+  }
+}

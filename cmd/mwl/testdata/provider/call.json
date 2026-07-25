@@ -1,0 +1,26 @@
+{
+  "$schema": "https://mwl.dev/v0.1/provider/schema.json",
+  "uri": "mwl:provider.call/example/echo/v1",
+  "codePrefix": "Echo",
+  "description": "Produces its input as its success value.",
+  "parameters": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["value"],
+    "properties": {
+      "value": { "description": "The value to produce." },
+      "uppercase": { "type": "boolean", "description": "Uppercase string values." }
+    }
+  },
+  "metadata": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "echoedAt": { "type": "string", "description": "When the echo resolved." }
+    }
+  },
+  "failureCatalog": {
+    "closed": ["Provider.Call.Echo.ValueTooLarge"],
+    "open": ["Provider.Call.Echo.Backend.*"]
+  }
+}

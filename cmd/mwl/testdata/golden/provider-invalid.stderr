@@ -1,0 +1,2 @@
+testdata/provider/invalid-catalog.json:4:17: error: codePrefix must be an uppercase letter followed by letters and digits [invalid-value]
+testdata/provider/invalid-catalog.json:8:16: error: a closed code must be fully qualified: Provider.<Kind>.<codePrefix>.<Code> [invalid-value]

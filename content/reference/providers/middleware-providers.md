@@ -66,6 +66,14 @@ action executes it, not at the phase boundary. The device is what lets a
 middleware hold executable structure: the [`Finally`](#the-finally-middleware)
 middleware's cleanup call and stack are the catalog's instances.
 
+A `structural` name is expected to name a member of the phase's parameter
+schema. A name matching no key of that schema's top-level `properties` does not
+invalidate the document, because a parameter schema may admit members in other
+ways, but the mismatch is silent in effect: the declaration marks nothing, and
+the member it was meant to mark evaluates as an ordinary `with` member.
+Validators MAY warn where a `structural` name matches no key of the phase's
+`parameters` top-level `properties`, but MUST NOT reject the definition.
+
 ### Contributed metadata
 
 A middleware declares the members it contributes to the execution context as a
